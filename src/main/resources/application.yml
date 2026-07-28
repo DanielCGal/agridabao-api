@@ -1,0 +1,69 @@
+server:
+  # Cloud hosts (Railway, Render, Fly) inject the port to bind as $PORT. Binding a
+  # fixed 8080 there makes the health check fail and the deploy gets killed.
+  port: ${PORT:8080}
+  address: 0.0.0.0
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: agridabao-api
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+        transport:
+          protocol: smtp
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/agridabao_players}
+    username: ${SPRING_DATASOURCE_USERNAME:agridabao_admin}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  jwt:
+    issuer: agridabao-api
+    secret-base64: ${APP_JWT_SECRET_BASE64}
+    access-token-minutes: ${APP_ACCESS_TOKEN_MINUTES:1440}
+
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
+    from-name: ${MAIL_FROM_NAME:Team GreenScape}
+
+  verification:
+    code-length: ${APP_VERIFICATION_CODE_LENGTH:9}
+    ttl-minutes: ${APP_VERIFICATION_TTL_MINUTES:10}
+    max-attempts: ${APP_VERIFICATION_MAX_ATTEMPTS:5}
+    resend-cooldown-seconds: ${APP_VERIFICATION_RESEND_COOLDOWN_SECONDS:30}
+    # Dev only: when true the code is logged to the console AND returned in the
+    # request-step response so testing works without a real inbox.
+    # Defaults to FALSE so a deployed server never hands out login codes to anyone
+    # who calls the endpoint. Set APP_VERIFICATION_EXPOSE_CODE=true locally only.
+    expose-code: ${APP_VERIFICATION_EXPOSE_CODE:false}

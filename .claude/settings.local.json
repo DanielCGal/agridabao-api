@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(.\\\\gradlew.bat compileJava --console=plain)",
+      "WebSearch",
+      "Bash(python -c \"import reportlab; print\\(reportlab.Version\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"import reportlab; print\\('ok', reportlab.Version\\)\")",
+      "Bash(python build_license_audit.py)",
+      "Bash(python -c ' *)",
+      "Bash(./gradlew.bat compileJava --console=plain -q)",
+      "Bash(echo \"=== EXIT: $? ===\")",
+      "Bash(grep -rniE \"password *= *[\\\\\"'][^\\\\\"'$]|secret *= *[\\\\\"'][^\\\\\"'$]|api[_-]?key *= *[\\\\\"'][^\\\\\"'$]|AIza\" src/ scripts/ build.gradle)",
+      "Bash(grep -viE '\\\\$\\\\{|getenv|System\\\\.| env:|Read-Host|\\\\.Trim\\\\\\(\\\\\\)')"
+    ]
+  }
+}
