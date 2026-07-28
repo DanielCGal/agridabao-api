@@ -11,7 +11,9 @@
       "Bash(./gradlew.bat compileJava --console=plain -q)",
       "Bash(echo \"=== EXIT: $? ===\")",
       "Bash(grep -rniE \"password *= *[\\\\\"'][^\\\\\"'$]|secret *= *[\\\\\"'][^\\\\\"'$]|api[_-]?key *= *[\\\\\"'][^\\\\\"'$]|AIza\" src/ scripts/ build.gradle)",
-      "Bash(grep -viE '\\\\$\\\\{|getenv|System\\\\.| env:|Read-Host|\\\\.Trim\\\\\\(\\\\\\)')"
+      "Bash(grep -viE '\\\\$\\\\{|getenv|System\\\\.| env:|Read-Host|\\\\.Trim\\\\\\(\\\\\\)')",
+      "WebFetch(domain:resend.com)",
+      "Bash(./gradlew.bat compileJava --console=plain)"
     ]
   }
 }
