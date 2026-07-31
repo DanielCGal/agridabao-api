@@ -94,6 +94,19 @@ public class MarketplaceController {
         return service.cancelOrClaim(userId(jwt), listingId);
     }
 
+    /** Sales this player has not been notified about yet. */
+    @GetMapping("/sales/unseen")
+    public List<MarketplaceSaleNotificationResponse> unseenSales(@AuthenticationPrincipal Jwt jwt) {
+        return service.unseenSales(userId(jwt));
+    }
+
+    /** Marks one sale notification as shown so it is not repeated. */
+    @PostMapping("/sales/{listingId}/acknowledge")
+    public void acknowledgeSale(@AuthenticationPrincipal Jwt jwt,
+                                @PathVariable UUID listingId) {
+        service.acknowledgeSale(userId(jwt), listingId);
+    }
+
     private static UUID userId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
@@ -128,6 +141,16 @@ record MarketplacePurchaseResponse(
         MarketplaceListingResponse listing,
         long buyerFarmRevision,
         int buyerMoney
+) { }
+
+/** One "your listing sold" notification, shown to the seller once. */
+record MarketplaceSaleNotificationResponse(
+        UUID listingId,
+        String buyerDisplayName,
+        String itemType,
+        int quantity,
+        int moneyReceived,
+        Instant soldAt
 ) { }
 
 @Entity
@@ -167,6 +190,10 @@ class MarketplaceListing {
     @Column(name = "buyer_id")
     private UUID buyerId;
 
+    /** False until the seller has been shown the "your item sold" notification. */
+    @Column(name = "sale_acknowledged", nullable = false)
+    private boolean saleAcknowledged;
+
     protected MarketplaceListing() { }
 
     MarketplaceListing(UUID id, UUID sellerId, String itemType, int quantity,
@@ -191,12 +218,19 @@ class MarketplaceListing {
     ListingStatus getStatus() { return status; }
     Instant getCreatedAt() { return createdAt; }
     Instant getExpiresAt() { return expiresAt; }
+    UUID getBuyerId() { return buyerId; }
+    Instant getSoldAt() { return soldAt; }
+    boolean isSaleAcknowledged() { return saleAcknowledged; }
 
     void sold(UUID buyerId, Instant now) {
         this.status = ListingStatus.SOLD;
         this.buyerId = buyerId;
         this.soldAt = now;
+        // The seller has not seen this yet; the notification endpoint clears it.
+        this.saleAcknowledged = false;
     }
+
+    void acknowledgeSale() { this.saleAcknowledged = true; }
 
     void cancelled() { this.status = ListingStatus.CANCELLED; }
     void expired() { this.status = ListingStatus.EXPIRED; }
@@ -208,6 +242,10 @@ interface MarketplaceListingRepository extends JpaRepository<MarketplaceListing,
     List<MarketplaceListing> findByStatusAndItemTypeOrderByCreatedAtDesc(
             ListingStatus status, String itemType);
     List<MarketplaceListing> findBySellerIdAndStatusOrderByCreatedAtDesc(
+            UUID sellerId, ListingStatus status);
+
+    /** Sales this seller has not been shown yet, oldest first. */
+    List<MarketplaceListing> findBySellerIdAndStatusAndSaleAcknowledgedFalseOrderBySoldAtAsc(
             UUID sellerId, ListingStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -384,6 +422,46 @@ class MarketplaceService {
             listing.returnPending();
         }
         repository.save(listing);
+    }
+
+    /**
+     * Sales the seller has not seen yet. Read-only: the client acknowledges them
+     * separately, so a dropped response does not lose the notification.
+     */
+    @Transactional(readOnly = true)
+    public List<MarketplaceSaleNotificationResponse> unseenSales(UUID sellerId) {
+        return repository
+                .findBySellerIdAndStatusAndSaleAcknowledgedFalseOrderBySoldAtAsc(
+                        sellerId, ListingStatus.SOLD)
+                .stream()
+                .map(listing -> new MarketplaceSaleNotificationResponse(
+                        listing.getId(),
+                        displayNameOf(listing.getBuyerId()),
+                        listing.getItemType(),
+                        listing.getQuantity(),
+                        // The seller receives the asking price; the listing fee was
+                        // already paid up front when the listing was created.
+                        listing.getAskingPrice(),
+                        listing.getSoldAt()))
+                .toList();
+    }
+
+    @Transactional
+    public void acknowledgeSale(UUID sellerId, UUID listingId) {
+        MarketplaceListing listing = repository.findById(listingId)
+                .orElseThrow(() -> new NotFoundException("Listing not found."));
+        if (!listing.getSellerId().equals(sellerId)) {
+            throw new ForbiddenException("This listing belongs to another player.");
+        }
+        listing.acknowledgeSale();
+        repository.save(listing);
+    }
+
+    private String displayNameOf(UUID userId) {
+        if (userId == null) return "A farmer";
+        AppUser user = userRepository.findById(userId).orElse(null);
+        return user == null || user.getDisplayName() == null || user.getDisplayName().isBlank()
+                ? "Unnamed Farmer" : user.getDisplayName();
     }
 
     private MarketplaceListingResponse response(MarketplaceListing listing, UUID currentUserId) {
