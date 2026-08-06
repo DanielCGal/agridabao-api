@@ -60,6 +60,19 @@ management:
       enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
 
 app:
+  ai:
+    # Master switch for the in-game AI adviser. Set APP_AI_ENABLED=false to stop
+    # the server calling Gemini at all - the game then shows "Antonio is busy"
+    # instead of an answer. Useful for capping spend or during a demo.
+    enabled: ${APP_AI_ENABLED:true}
+
+    gemini:
+      # The key now lives here rather than in the Unity build. A Unity APK ships
+      # its Inspector values inside the package, so a key held on a MonoBehaviour
+      # can be extracted by unpacking it; server-side it never leaves the host.
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-2.5-flash}
+
   jwt:
     issuer: agridabao-api
     secret-base64: ${APP_JWT_SECRET_BASE64}
