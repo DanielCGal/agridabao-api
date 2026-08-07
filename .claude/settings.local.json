@@ -73,7 +73,9 @@
       "Bash(sed -n '/Vector3 placementOffset =/,/^            }/p' ClimateMaintenance/ClimateMaintenanceInteractionSystem.cs)",
       "Bash(sed -n '/if \\(buryFraction > 0f\\)/,/^                }/p' FarmingInteractionSystem.cs)",
       "Bash(./gradlew.bat compileJava --console=plain -q --rerun-tasks -Porg.gradle.jvmargs=-Xlint:deprecation)",
-      "Bash(grep -iA 3 \"deprecat\")"
+      "Bash(grep -iA 3 \"deprecat\")",
+      "Bash(sed -n '/public void ShowEventEnded/,/^        }/p' ClimateEvaluationPopupBuilder.cs)",
+      "Bash(sed -n '/private void CreateScrollableBody/,/^        }/p' ClimateEvaluationPopupBuilder.cs)"
     ]
   }
 }

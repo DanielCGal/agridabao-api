@@ -157,8 +157,15 @@ class AiService {
             // Chat: slightly creative, and a ceiling high enough that a farm with
             // several crop groups does not get its answer cut off mid-sentence.
             case ADVISOR -> new GeminiClient.GenerationConfig(0.4, 0.9, 3000, false);
-            // Evaluation ran on Gemini's defaults before the move; kept that way.
-            case CLIMATE_EVALUATION -> new GeminiClient.GenerationConfig(null, null, 3000, false);
+            // No token ceiling, which is how this ran before the call moved here.
+            //
+            // Gemini 2.5 Flash is a thinking model and its reasoning tokens count
+            // against maxOutputTokens. The climate payload is by far the largest
+            // prompt the game sends - the guidance plus every before/after crop
+            // snapshot and every recorded action - so a 3000 cap could be spent
+            // entirely on thinking, returning MAX_TOKENS with an empty parts array
+            // and therefore no evaluation text at all.
+            case CLIMATE_EVALUATION -> new GeminiClient.GenerationConfig(null, null, null, false);
             // Task generation and grading must return parseable JSON, so the
             // response MIME type is pinned and the temperature kept low.
             case TASK_GENERATE, TASK_CHECK ->
