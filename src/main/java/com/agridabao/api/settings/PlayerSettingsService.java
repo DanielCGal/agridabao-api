@@ -25,8 +25,8 @@ public class PlayerSettingsService {
     // the text ceiling is lower because an oversized label wraps inside its rect.
     private static final float UI_SCALE_MIN = 0.80f;
     private static final float UI_SCALE_MAX = 1.20f;
-    private static final float TEXT_SCALE_MIN = 0.85f;
-    private static final float TEXT_SCALE_MAX = 1.25f;
+    private static final float TEXT_SCALE_MIN = 0.80f;
+    private static final float TEXT_SCALE_MAX = 1.15f;
 
     private final PlayerSettingsRepository repository;
 
