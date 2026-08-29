@@ -27,6 +27,14 @@ public class PlayerSettings {
     @Column(name = "render_distance", nullable = false)
     private float renderDistance;
 
+    /** Interface size multiplier; 1 is the size the game has always drawn at. */
+    @Column(name = "ui_scale", nullable = false)
+    private float uiScale;
+
+    /** Text size multiplier, applied on top of {@link #uiScale}. */
+    @Column(name = "text_scale", nullable = false)
+    private float textScale;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -34,12 +42,15 @@ public class PlayerSettings {
     }
 
     public PlayerSettings(UUID userId, float musicVolume, float sfxVolume,
-                          float ambienceVolume, float renderDistance, Instant updatedAt) {
+                          float ambienceVolume, float renderDistance,
+                          float uiScale, float textScale, Instant updatedAt) {
         this.userId = userId;
         this.musicVolume = musicVolume;
         this.sfxVolume = sfxVolume;
         this.ambienceVolume = ambienceVolume;
         this.renderDistance = renderDistance;
+        this.uiScale = uiScale;
+        this.textScale = textScale;
         this.updatedAt = updatedAt;
     }
 
@@ -48,14 +59,19 @@ public class PlayerSettings {
     public float getSfxVolume() { return sfxVolume; }
     public float getAmbienceVolume() { return ambienceVolume; }
     public float getRenderDistance() { return renderDistance; }
+    public float getUiScale() { return uiScale; }
+    public float getTextScale() { return textScale; }
     public Instant getUpdatedAt() { return updatedAt; }
 
     public void update(float musicVolume, float sfxVolume, float ambienceVolume,
-                       float renderDistance, Instant updatedAt) {
+                       float renderDistance, float uiScale, float textScale,
+                       Instant updatedAt) {
         this.musicVolume = musicVolume;
         this.sfxVolume = sfxVolume;
         this.ambienceVolume = ambienceVolume;
         this.renderDistance = renderDistance;
+        this.uiScale = uiScale;
+        this.textScale = textScale;
         this.updatedAt = updatedAt;
     }
 }
