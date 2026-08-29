@@ -26,7 +26,7 @@ public class PlayerSettingsService {
     private static final float UI_SCALE_MIN = 0.80f;
     private static final float UI_SCALE_MAX = 1.20f;
     private static final float TEXT_SCALE_MIN = 0.85f;
-    private static final float TEXT_SCALE_MAX = 1.35f;
+    private static final float TEXT_SCALE_MAX = 1.25f;
 
     private final PlayerSettingsRepository repository;
 
