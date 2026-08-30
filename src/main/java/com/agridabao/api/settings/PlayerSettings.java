@@ -35,6 +35,10 @@ public class PlayerSettings {
     @Column(name = "text_scale", nullable = false)
     private float textScale;
 
+    /** When true the adviser and climate evaluation answer in a couple of sentences. */
+    @Column(name = "ai_summarization", nullable = false)
+    private boolean aiSummarization;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -43,7 +47,8 @@ public class PlayerSettings {
 
     public PlayerSettings(UUID userId, float musicVolume, float sfxVolume,
                           float ambienceVolume, float renderDistance,
-                          float uiScale, float textScale, Instant updatedAt) {
+                          float uiScale, float textScale, boolean aiSummarization,
+                          Instant updatedAt) {
         this.userId = userId;
         this.musicVolume = musicVolume;
         this.sfxVolume = sfxVolume;
@@ -51,6 +56,7 @@ public class PlayerSettings {
         this.renderDistance = renderDistance;
         this.uiScale = uiScale;
         this.textScale = textScale;
+        this.aiSummarization = aiSummarization;
         this.updatedAt = updatedAt;
     }
 
@@ -61,17 +67,19 @@ public class PlayerSettings {
     public float getRenderDistance() { return renderDistance; }
     public float getUiScale() { return uiScale; }
     public float getTextScale() { return textScale; }
+    public boolean isAiSummarization() { return aiSummarization; }
     public Instant getUpdatedAt() { return updatedAt; }
 
     public void update(float musicVolume, float sfxVolume, float ambienceVolume,
                        float renderDistance, float uiScale, float textScale,
-                       Instant updatedAt) {
+                       boolean aiSummarization, Instant updatedAt) {
         this.musicVolume = musicVolume;
         this.sfxVolume = sfxVolume;
         this.ambienceVolume = ambienceVolume;
         this.renderDistance = renderDistance;
         this.uiScale = uiScale;
         this.textScale = textScale;
+        this.aiSummarization = aiSummarization;
         this.updatedAt = updatedAt;
     }
 }

@@ -14,6 +14,7 @@ public record PlayerSettingsRequest(
         float ambienceVolume,
         float renderDistance,
         float uiScale,
-        float textScale
+        float textScale,
+        boolean aiSummarization
 ) {
 }

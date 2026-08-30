@@ -6,7 +6,8 @@ public record PlayerSettingsResponse(
         float ambienceVolume,
         float renderDistance,
         float uiScale,
-        float textScale
+        float textScale,
+        boolean aiSummarization
 ) {
     public static PlayerSettingsResponse from(PlayerSettings settings) {
         return new PlayerSettingsResponse(
@@ -15,7 +16,8 @@ public record PlayerSettingsResponse(
                 settings.getAmbienceVolume(),
                 settings.getRenderDistance(),
                 settings.getUiScale(),
-                settings.getTextScale()
+                settings.getTextScale(),
+                settings.isAiSummarization()
         );
     }
 }

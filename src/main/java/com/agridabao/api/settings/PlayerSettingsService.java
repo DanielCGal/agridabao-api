@@ -17,6 +17,9 @@ public class PlayerSettingsService {
     static final float DEFAULT_UI_SCALE = 1f;
     static final float DEFAULT_TEXT_SCALE = 1f;
 
+    /** Off is the adviser's existing full-length answer. */
+    static final boolean DEFAULT_AI_SUMMARIZATION = false;
+
     private static final float RENDER_MIN = 8f;
     private static final float RENDER_MAX = 60f;
 
@@ -40,7 +43,8 @@ public class PlayerSettingsService {
                 .map(PlayerSettingsResponse::from)
                 .orElseGet(() -> new PlayerSettingsResponse(
                         DEFAULT_MUSIC, DEFAULT_SFX, DEFAULT_AMBIENCE, DEFAULT_RENDER,
-                        DEFAULT_UI_SCALE, DEFAULT_TEXT_SCALE));
+                        DEFAULT_UI_SCALE, DEFAULT_TEXT_SCALE,
+                        DEFAULT_AI_SUMMARIZATION));
     }
 
     @Transactional
@@ -69,9 +73,11 @@ public class PlayerSettingsService {
 
         if (settings == null) {
             settings = new PlayerSettings(
-                    userId, music, sfx, ambience, render, uiScale, textScale, now);
+                    userId, music, sfx, ambience, render, uiScale, textScale,
+                    request.aiSummarization(), now);
         } else {
-            settings.update(music, sfx, ambience, render, uiScale, textScale, now);
+            settings.update(music, sfx, ambience, render, uiScale, textScale,
+                    request.aiSummarization(), now);
         }
 
         return PlayerSettingsResponse.from(repository.save(settings));
