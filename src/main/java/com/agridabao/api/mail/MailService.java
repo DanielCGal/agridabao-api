@@ -17,7 +17,13 @@ import java.util.Base64;
 @Service
 public class MailService {
     private static final Logger log = LoggerFactory.getLogger(MailService.class);
-    private static final String HEADER_IMAGE = "email/header.png";
+    // JPEG rather than PNG: the banner is a photographic image with no
+    // transparency, and the PNG it replaced was 5.2 MB - 2752px wide for a
+    // banner drawn at 500. Every send base64-encoded that to roughly 7 MB, so
+    // MAX_INLINE_IMAGE_BYTES below dropped it and the emails went out with a
+    // broken image. At 1000px and quality 85 it is 137 KB and still 2x the
+    // width it is displayed at.
+    private static final String HEADER_IMAGE = "email/header.jpg";
 
     /**
      * Gmail clips messages larger than ~102 KB and big inline images make every
@@ -144,7 +150,9 @@ public class MailService {
             log.warn("Header image not found at classpath:{}; sending email without it.", HEADER_IMAGE);
         }
 
-        resend.send(from, fromName, to, subject, html, imageBase64, "header.png", "header");
+        // The filename has to match the real format: some mail clients decide how
+        // to decode an attachment from its extension, not its bytes.
+        resend.send(from, fromName, to, subject, html, imageBase64, "header.jpg", "header");
         log.info("Sent {} email to {}.", label, to);
     }
 
