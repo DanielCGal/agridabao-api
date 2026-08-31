@@ -76,7 +76,14 @@ app:
   jwt:
     issuer: agridabao-api
     secret-base64: ${APP_JWT_SECRET_BASE64}
-    access-token-minutes: ${APP_ACCESS_TOKEN_MINUTES:1440}
+    # 30 days. The phone keeps its token so a returning player goes straight to
+    # the menu, and a 24-hour token would have sent anyone away for a day back to
+    # the login screen without them ever having logged out.
+    #
+    # The cost is that a token lifted off a device stays valid for that long and
+    # nothing revokes it early - pressing Logout only clears the phone's copy.
+    # Overridable per environment through APP_ACCESS_TOKEN_MINUTES.
+    access-token-minutes: ${APP_ACCESS_TOKEN_MINUTES:43200}
 
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
