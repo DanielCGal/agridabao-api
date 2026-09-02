@@ -212,8 +212,19 @@ class AiService {
             case CLIMATE_EVALUATION -> new GeminiClient.GenerationConfig(null, null, null, false);
             // Task generation and grading must return parseable JSON, so the
             // response MIME type is pinned and the temperature kept low.
+            //
+            // No token ceiling, for the same reason the climate write-up above
+            // has none. Gemini 2.5 Flash thinks before it answers and those
+            // reasoning tokens are charged against maxOutputTokens, so on a
+            // large farm-context prompt a 3000 cap could be spent almost
+            // entirely on thinking - the reply came back as MAX_TOKENS with the
+            // JSON cut off mid-object, the client could not parse it, and the
+            // game quietly fell back to a canned local task that had never
+            // looked at the farm. The tell was that the failed replies were
+            // SHORTER than the successful ones, which is backwards for a limit
+            // that is supposed to stop long answers.
             case TASK_GENERATE, TASK_CHECK ->
-                    new GeminiClient.GenerationConfig(0.25, null, 3000, true);
+                    new GeminiClient.GenerationConfig(0.25, null, null, true);
         };
     }
 }
