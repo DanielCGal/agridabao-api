@@ -54,4 +54,27 @@ public class AppUser {
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    // Only the three fields a player can edit from the Account panel are
+    // mutable. Each stamps updatedAt itself so no caller can change an account
+    // without leaving a trace of when it happened.
+
+    public void changeEmail(String newEmail) {
+        this.email = newEmail;
+        touch();
+    }
+
+    public void changePasswordHash(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+        touch();
+    }
+
+    public void changeDisplayName(String newDisplayName) {
+        this.displayName = newDisplayName;
+        touch();
+    }
+
+    private void touch() {
+        this.updatedAt = Instant.now();
+    }
 }

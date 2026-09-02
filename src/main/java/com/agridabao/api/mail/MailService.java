@@ -67,6 +67,17 @@ public class MailService {
         send(email, "Your GreenScape Login Code", "email/login-code.html", code, "login");
     }
 
+    public void sendPasswordResetCode(String email, String code) {
+        send(email, "Your GreenScape Password Reset Code",
+                "email/password-reset-code.html", code, "password reset");
+    }
+
+    /** Sent to the address being moved TO, which is the one being proven. */
+    public void sendEmailChangeCode(String newEmail, String code) {
+        send(newEmail, "Confirm Your New GreenScape Email",
+                "email/email-change-code.html", code, "email change");
+    }
+
     private void send(String to, String subject, String templatePath, String code, String label) {
         if (exposeCode) {
             log.info("[DEV] {} verification code for {}: {}", label, to, code);
