@@ -2,7 +2,6 @@ package com.agridabao.api.user;
 
 import com.agridabao.api.auth.AuthResponse;
 import com.agridabao.api.auth.CodeRequestResponse;
-import com.agridabao.api.auth.MessageResponse;
 import com.agridabao.api.auth.UserResponse;
 import com.agridabao.api.auth.VerificationService;
 import com.agridabao.api.error.ConflictException;
@@ -108,6 +107,10 @@ public class AccountService {
         user.changeEmail(newEmail);
         userRepository.save(user);
 
+        return issueFor(user);
+    }
+
+    private AuthResponse issueFor(AppUser user) {
         JwtService.IssuedToken token = jwtService.issue(user);
         return new AuthResponse(
                 token.value(),
@@ -116,8 +119,16 @@ public class AccountService {
                 UserResponse.from(user));
     }
 
+    /**
+     * Changes the password and, with it, ends every other session on the
+     * account - see AppUser.changePasswordHash.
+     *
+     * A fresh token comes back because the change retires the one the caller
+     * used to make it. Without that they would be signed out by their own
+     * password change, which is the opposite of what pressing the button means.
+     */
     @Transactional
-    public MessageResponse changePassword(UUID userId, ChangePasswordRequest request) {
+    public AuthResponse changePassword(UUID userId, ChangePasswordRequest request) {
         AppUser user = require(userId);
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
@@ -135,7 +146,7 @@ public class AccountService {
         user.changePasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
 
-        return new MessageResponse("Your password has been changed.");
+        return issueFor(user);
     }
 
     @Transactional

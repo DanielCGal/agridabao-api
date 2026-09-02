@@ -1,12 +1,14 @@
 package com.agridabao.api.config;
 
 import com.agridabao.api.security.JwtService;
+import com.agridabao.api.user.AppUserRepository;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,11 +31,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
+import java.util.UUID;
 
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, SecretKey secretKey) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                            SecretKey secretKey,
+                                            ObjectProvider<AppUserRepository> users) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
@@ -43,7 +48,7 @@ public class SecurityConfig {
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer ->
-                        resourceServer.jwt(jwt -> jwt.decoder(accessTokenDecoder(secretKey))));
+                        resourceServer.jwt(jwt -> jwt.decoder(accessTokenDecoder(secretKey, users))));
 
         return http.build();
     }
@@ -58,14 +63,16 @@ public class SecurityConfig {
      * access token; JwtService keeps the unrestricted decoder so it can still
      * read the ticket on the reset endpoint itself.
      */
-    private static JwtDecoder accessTokenDecoder(SecretKey secretKey) {
+    private static JwtDecoder accessTokenDecoder(SecretKey secretKey,
+                                                 ObjectProvider<AppUserRepository> users) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
 
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefault(),
-                SecurityConfig::requireAccessPurpose));
+                SecurityConfig::requireAccessPurpose,
+                jwt -> requireCurrentTokenVersion(jwt, users)));
 
         return decoder;
     }
@@ -81,6 +88,53 @@ public class SecurityConfig {
 
         return OAuth2TokenValidatorResult.failure(new OAuth2Error(
                 "invalid_token", "This token cannot be used to call the API.", null));
+    }
+
+    /**
+     * Refuses a token that was issued before the account's last password change.
+     *
+     * This is the one thing a stateless token cannot do on its own. Everything
+     * else about a token is settled by its signature and its expiry, but "has
+     * this session been revoked since" can only be answered by the account, so
+     * this costs one lookup by primary key per authenticated request. That is
+     * the price of being able to end a session at all, and it is worth paying:
+     * without it, changing a password locks an intruder out of signing in again
+     * but leaves the session they already have running for up to thirty days.
+     *
+     * The repository is resolved lazily. The decoder is built while the security
+     * filter chain is being assembled, which is earlier than the JPA layer is
+     * ready, and asking for the bean then would fail.
+     */
+    private static OAuth2TokenValidatorResult requireCurrentTokenVersion(
+            Jwt jwt, ObjectProvider<AppUserRepository> users) {
+        UUID userId;
+        try {
+            userId = UUID.fromString(jwt.getSubject());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            return staleSession();
+        }
+
+        AppUserRepository repository = users.getIfAvailable();
+        if (repository == null) {
+            // Nothing to check against. Refusing every request would take the
+            // whole API down over a startup ordering problem, which is a far
+            // worse failure than one session outliving a password change.
+            return OAuth2TokenValidatorResult.success();
+        }
+
+        Integer tokenVersion = jwt.getClaim(JwtService.VERSION_CLAIM) instanceof Number version
+                ? version.intValue()
+                : 0;
+
+        return repository.findById(userId)
+                .filter(user -> user.getTokenVersion() == tokenVersion)
+                .map(user -> OAuth2TokenValidatorResult.success())
+                .orElseGet(SecurityConfig::staleSession);
+    }
+
+    private static OAuth2TokenValidatorResult staleSession() {
+        return OAuth2TokenValidatorResult.failure(new OAuth2Error(
+                "invalid_token", "This session has ended. Please sign in again.", null));
     }
 
     @Bean

@@ -30,6 +30,15 @@ public class JwtService {
     public static final String PURPOSE_PASSWORD_RESET = "password_reset";
 
     /**
+     * The account's token version at the moment this token was issued. The
+     * server compares it against the account on every request, so a password
+     * change - which increments the account's - retires every token issued
+     * before it. Absent means zero: tokens minted before this claim existed keep
+     * working until their account's first password change.
+     */
+    public static final String VERSION_CLAIM = "ver";
+
+    /**
      * How long the player has to choose a new password after their emailed code
      * checks out. Short on purpose: the ticket is proof of a passed check, so it
      * is worth as much as the code was, and it only has to survive one screen.
@@ -62,6 +71,7 @@ public class JwtService {
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())
                 .claim(PURPOSE_CLAIM, PURPOSE_ACCESS)
+                .claim(VERSION_CLAIM, user.getTokenVersion())
                 .build();
 
         return new IssuedToken(encode(claims), expiresAt);

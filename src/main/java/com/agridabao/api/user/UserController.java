@@ -2,7 +2,6 @@ package com.agridabao.api.user;
 
 import com.agridabao.api.auth.AuthResponse;
 import com.agridabao.api.auth.CodeRequestResponse;
-import com.agridabao.api.auth.MessageResponse;
 import com.agridabao.api.auth.UserResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -42,8 +41,8 @@ public class UserController {
     }
 
     @PostMapping("/me/password")
-    public MessageResponse changePassword(@AuthenticationPrincipal Jwt jwt,
-                                          @Valid @RequestBody ChangePasswordRequest request) {
+    public AuthResponse changePassword(@AuthenticationPrincipal Jwt jwt,
+                                       @Valid @RequestBody ChangePasswordRequest request) {
         return accountService.changePassword(userId(jwt), request);
     }
 
