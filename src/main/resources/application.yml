@@ -103,6 +103,19 @@ app:
     # default would give every player in the game a way to delete anyone.
     emails: ${APP_ADMIN_EMAILS:}
 
+    # Whether an admin account may open the developer tools on a phone. Off by
+    # default and separate from the list above, so the tools can be granted to
+    # a laptop without also arming them on every device that account signs in
+    # on. Turn it on for a test session, off again afterwards.
+    #
+    # Worth being clear about what this does and does not buy: the tools' local
+    # actions - money, seeds, skipping days - are simulated on the phone, so a
+    # rebuilt APK could do them whatever this says. What it protects is the
+    # ordinary build, where the button simply is not there. The destructive
+    # actions - deleting an account, sending events to another player - are
+    # gated on the email list server-side and are unaffected by this.
+    mobile-tools: ${APP_ADMIN_MOBILE_TOOLS:false}
+
   verification:
     code-length: ${APP_VERIFICATION_CODE_LENGTH:9}
     ttl-minutes: ${APP_VERIFICATION_TTL_MINUTES:10}

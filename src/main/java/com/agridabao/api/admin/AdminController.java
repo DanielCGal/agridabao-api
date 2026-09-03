@@ -51,6 +51,18 @@ public class AdminController {
         this.service = service;
     }
 
+    /**
+     * What the calling account is allowed to do with the developer tools.
+     *
+     * Deliberately not admin-gated: every signed-in player asks this, and a
+     * non-admin gets an honest "no" rather than a refusal. It reveals only
+     * whether the caller themselves is on the list, never who else is.
+     */
+    @PostMapping("/capability")
+    public AdminCapabilityResponse capability(@AuthenticationPrincipal Jwt jwt) {
+        return service.capability(userId(jwt));
+    }
+
     /** Answers whether an address is in use, so the tool can confirm before deleting. */
     @PostMapping("/accounts/lookup")
     public AdminAccountLookupResponse lookup(@AuthenticationPrincipal Jwt jwt,
@@ -89,6 +101,13 @@ public class AdminController {
 }
 
 record AdminEmailRequest(@NotBlank @Email @Size(max = 320) String email) {
+}
+
+/**
+ * @param admin              whether this account is on the admin list
+ * @param mobileToolsEnabled whether the server currently allows the tools on a phone
+ */
+record AdminCapabilityResponse(boolean admin, boolean mobileToolsEnabled) {
 }
 
 record AdminAccountLookupResponse(boolean exists,
@@ -148,23 +167,43 @@ class AdminAccountService {
     private final AdminCommandRepository repository;
     private final PresenceAccessService presence;
 
+    /** Whether an admin may open the tools on a phone. See application.yml. */
+    private final boolean mobileToolsEnabled;
+
     AdminAccountService(AppUserRepository userRepository,
                         FarmSaveRepository farmSaveRepository,
                         EmailVerificationRepository verificationRepository,
                         AdminCommandRepository repository,
                         PresenceAccessService presence,
-                        @Value("${app.admin.emails:}") String configured) {
+                        @Value("${app.admin.emails:}") String configured,
+                        @Value("${app.admin.mobile-tools:false}") boolean mobileToolsEnabled) {
         this.userRepository = userRepository;
         this.farmSaveRepository = farmSaveRepository;
         this.verificationRepository = verificationRepository;
         this.repository = repository;
         this.presence = presence;
+        this.mobileToolsEnabled = mobileToolsEnabled;
         this.adminEmails = parse(configured);
 
         log.info("Admin account tools: {}",
                 adminEmails.isEmpty()
                         ? "DISABLED (APP_ADMIN_EMAILS is not set)"
                         : adminEmails.size() + " address(es) allowed");
+        log.info("Admin tools on mobile: {}", mobileToolsEnabled ? "ALLOWED" : "blocked");
+    }
+
+    @Transactional(readOnly = true)
+    AdminCapabilityResponse capability(UUID callerId) {
+        boolean admin = !adminEmails.isEmpty()
+                && userRepository.findById(callerId)
+                .map(AppUser::getEmail)
+                .filter(adminEmails::contains)
+                .isPresent();
+
+        // The phone flag is reported only to an admin. Telling a stranger whether
+        // the mobile tools are switched on says something about the deployment
+        // that they have no reason to know.
+        return new AdminCapabilityResponse(admin, admin && mobileToolsEnabled);
     }
 
     @Transactional(readOnly = true)
