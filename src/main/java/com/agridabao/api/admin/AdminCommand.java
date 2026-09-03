@@ -19,7 +19,11 @@ enum AdminCommandType {
     /** Start a weather event. Uses payload for the type and durationDays. */
     FORCE_WEATHER,
     /** Start a pest or disease outbreak. Uses payload for the enum name. */
-    FORCE_PEST_DISEASE
+    FORCE_PEST_DISEASE,
+    /** Push the farm clock forward whole days. Uses amount. */
+    PASS_DAYS,
+    /** Push the farm clock forward whole hours. Uses amount. */
+    PASS_HOURS
 }
 
 /**

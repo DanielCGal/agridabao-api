@@ -161,6 +161,14 @@ class AdminAccountService {
     private static final int MAX_MONEY_GRANT = 1_000_000;
     private static final int MAX_WEATHER_DAYS = 14;
 
+    /**
+     * A game day is 900 real seconds, so thirty of them is well past any single
+     * test session and far enough to see a crop through its stages. Beyond that
+     * a slipped digit costs the tester their farm rather than their afternoon.
+     */
+    private static final int MAX_PASS_DAYS = 30;
+    private static final int MAX_PASS_HOURS = 48;
+
     private final AppUserRepository userRepository;
     private final FarmSaveRepository farmSaveRepository;
     private final EmailVerificationRepository verificationRepository;
@@ -315,6 +323,16 @@ class AdminAccountService {
                 amount = null;
                 duration = null;
             }
+            case PASS_DAYS -> {
+                amount = requireCount(amount, MAX_PASS_DAYS, "days");
+                payload = null;
+                duration = null;
+            }
+            case PASS_HOURS -> {
+                amount = requireCount(amount, MAX_PASS_HOURS, "hours");
+                payload = null;
+                duration = null;
+            }
         }
 
         repository.save(new AdminCommand(
@@ -357,6 +375,27 @@ class AdminAccountService {
         if (payload == null || payload.isBlank()) {
             throw new BadRequestException(message);
         }
+    }
+
+    /**
+     * A whole positive count within its ceiling.
+     *
+     * Refused rather than clamped, unlike a weather duration. Skipping time is
+     * not undoable on the receiving farm: crops age, weather rolls and daily
+     * objectives regenerate, so quietly turning a mistyped 200 into 30 would
+     * still hand the player a farm they did not expect.
+     */
+    private static Integer requireCount(Integer amount, int ceiling, String unit) {
+        if (amount == null || amount <= 0) {
+            throw new BadRequestException("Enter how many " + unit + " to pass.");
+        }
+
+        if (amount > ceiling) {
+            throw new BadRequestException(
+                    "At most " + ceiling + " " + unit + " can be passed at once.");
+        }
+
+        return amount;
     }
 
     private void requireAdmin(UUID callerId) {
