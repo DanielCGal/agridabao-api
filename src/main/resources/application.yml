@@ -95,6 +95,14 @@ app:
       # keep using Gmail SMTP.
       api-key: ${RESEND_API_KEY:}
 
+  admin:
+    # Comma-separated addresses allowed to use /api/admin, which can delete any
+    # account and everything belonging to it. Empty means nobody, not everybody:
+    # with this unset the endpoints refuse every caller. That is the safe way to
+    # fail - forgetting to set it costs one confusing error, while the opposite
+    # default would give every player in the game a way to delete anyone.
+    emails: ${APP_ADMIN_EMAILS:}
+
   verification:
     code-length: ${APP_VERIFICATION_CODE_LENGTH:9}
     ttl-minutes: ${APP_VERIFICATION_TTL_MINUTES:10}

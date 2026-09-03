@@ -20,4 +20,16 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
             UUID userId, VerificationPurpose purpose);
 
     void deleteByUserIdAndPurpose(UUID userId, VerificationPurpose purpose);
+
+    /**
+     * Every code for an address, whatever it was for.
+     *
+     * Used when an account is deleted. This table is keyed on the address and
+     * has no foreign key to app_user, so unlike every other table holding a
+     * player's data, nothing cascades into it: without these two the codes
+     * outlive the account they belonged to.
+     */
+    void deleteByEmail(String email);
+
+    void deleteByUserId(UUID userId);
 }
