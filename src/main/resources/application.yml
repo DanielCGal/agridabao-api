@@ -117,7 +117,10 @@ app:
     mobile-tools: ${APP_ADMIN_MOBILE_TOOLS:false}
 
   verification:
-    code-length: ${APP_VERIFICATION_CODE_LENGTH:9}
+    # Six digits, the length most emailed codes use: beta testers found nine
+    # hard to carry from the email into the game. A shorter code leans harder on
+    # max-attempts and ttl-minutes below to stay out of reach of guessing.
+    code-length: ${APP_VERIFICATION_CODE_LENGTH:6}
     ttl-minutes: ${APP_VERIFICATION_TTL_MINUTES:10}
     max-attempts: ${APP_VERIFICATION_MAX_ATTEMPTS:5}
     resend-cooldown-seconds: ${APP_VERIFICATION_RESEND_COOLDOWN_SECONDS:30}

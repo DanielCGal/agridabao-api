@@ -27,7 +27,7 @@ public class VerificationService {
 
     public VerificationService(EmailVerificationRepository repository,
                                PasswordEncoder passwordEncoder,
-                               @Value("${app.verification.code-length:9}") int codeLength,
+                               @Value("${app.verification.code-length:6}") int codeLength,
                                @Value("${app.verification.ttl-minutes:10}") long ttlMinutes,
                                @Value("${app.verification.max-attempts:5}") int maxAttempts,
                                @Value("${app.verification.resend-cooldown-seconds:30}") long resendCooldownSeconds) {
