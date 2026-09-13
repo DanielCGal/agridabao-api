@@ -311,7 +311,13 @@ class MarketplaceService {
                 combined.add(pending);
             }
         }
+        // A seed the viewer's district does not grow is not shown to them - they could
+        // not buy it anyway. Their own listings always show, so they can still cancel
+        // or claim them whatever they hold.
+        String viewerDistrict = economy.districtOf(currentUserId);
         return combined.stream()
+                .filter(listing -> listing.getSellerId().equals(currentUserId) ||
+                        economy.isItemAvailableInDistrict(listing.getItemType(), viewerDistrict))
                 .map(listing -> response(listing, currentUserId))
                 .toList();
     }
@@ -359,6 +365,10 @@ class MarketplaceService {
 
         ObjectNode buyerSnapshot = economy.editableSnapshot(buyerFarm);
         ObjectNode sellerSnapshot = economy.editableSnapshot(sellerFarm);
+        if (!economy.isItemAvailableInDistrict(listing.getItemType(), economy.district(buyerSnapshot))) {
+            throw new ConflictException(
+                    "That seed is not grown in your district, so it cannot be bought on the marketplace.");
+        }
         if (economy.getMoney(buyerSnapshot) < listing.getAskingPrice()) {
             throw new ConflictException("The buyer does not have enough money.");
         }

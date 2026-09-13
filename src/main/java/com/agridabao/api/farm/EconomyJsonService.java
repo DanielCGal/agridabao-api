@@ -193,6 +193,23 @@ public class EconomyJsonService {
         return snapshot.path("area").path("districtName").asText("");
     }
 
+    /**
+     * The district a player's saved farm is in, or an empty string when they have
+     * no saved farm or it does not record one - which {@link DistrictSeedPools}
+     * treats as its fallback pool, exactly as the game does.
+     */
+    public String districtOf(UUID userId) {
+        return farmRepository.findById(userId)
+                .map(FarmSave::getSnapshot)
+                .map(this::district)
+                .orElse("");
+    }
+
+    /** Whether a farm in this district may obtain the item. Only crop seeds are limited. */
+    public boolean isItemAvailableInDistrict(String itemType, String districtName) {
+        return DistrictSeedPools.isAvailableIn(itemType, districtName);
+    }
+
     public boolean isTradable(String itemType) {
         return itemType != null && TRADABLE_ITEMS.contains(itemType);
     }
