@@ -209,16 +209,21 @@ public class EconomyJsonService {
         }
     }
 
-    public int baseValue(String itemType) {
+    /**
+     * An item's marketplace base value, per item, in centavos. Turn a total into
+     * whole pesos with {@link PesoRounding#toWholePesos}.
+     */
+    public int baseValueCentavos(String itemType) {
 
         Integer weatherMitigationBaseValue =
         WeatherMitigationTradableItems.baseValueOrNull(itemType);
         if (weatherMitigationBaseValue != null) {
-            return weatherMitigationBaseValue;
+            // That table is still in whole pesos.
+            return weatherMitigationBaseValue * 100;
         }
 
         validateTradableItem(itemType);
-        return BASE_VALUES.getOrDefault(itemType, 1);
+        return BASE_VALUES.getOrDefault(itemType, 100);
     }
 
     public Set<String> tradableItems() {
@@ -279,27 +284,52 @@ public class EconomyJsonService {
         return LIQUID_ITEMS.contains(itemType) ? 1 : 999;
     }
 
+    /**
+     * Marketplace base values, per item, in centavos.
+     *
+     * <p>Seeds follow the Davao City government seed prices and produce follows
+     * the shipping bin, both of which have centavos in them; the tools keep the
+     * NPC shop prices. Must match {@code SocialMarketplaceCatalog.BaseValues} in
+     * the game client, or the listing fee a player is shown is not the one charged.
+     */
     private static Map<String, Integer> buildBaseValues() {
         Map<String, Integer> values = new LinkedHashMap<>();
-        values.put("PineappleSeed", 20); values.put("BananaSeed", 90);
-        values.put("CacaoSeed", 60); values.put("CoconutSeed", 45);
-        values.put("PomeloSeed", 80); values.put("MangoSeed", 220);
-        values.put("MangosteenSeed", 180); values.put("DurianSeed", 130);
-        values.put("CornSeed", 35); values.put("EggplantSeed", 45);
-        values.put("SquashSeed", 50); values.put("StrawberrySeed", 70);
-        values.put("TomatoSeed", 55);
-        values.put("Coconut", 8); values.put("Banana", 6);
-        values.put("Durian", 18); values.put("Pomelo", 10);
-        values.put("Cacao", 7); values.put("Pineapple", 9);
-        values.put("Mangosteen", 12); values.put("Mango", 11);
-        values.put("Corn", 5); values.put("Eggplant", 7);
-        values.put("Squash", 8); values.put("Strawberry", 12);
-        values.put("Tomato", 6);
-        values.put("AphidTrap", 35); values.put("InsecticideLiter", 90);
-        values.put("DisinfectantLiter", 80); values.put("NeemSoapLiter", 100);
-        values.put("BtBioInsecticideLiter", 130); values.put("CopperFungicideLiter", 120);
-        values.put("PheromoneTrap", 90); values.put("FruitBag", 25);
-        values.put("DrainageKit", 150); values.put("TermiteBaitStation", 110);
+        values.put("PineappleSeed", 1000);              // P10
+        values.put("BananaSeed", 1500);                 // P15
+        values.put("CacaoSeed", 2500);                  // P25
+        values.put("CoconutSeed", 1500);                // P15
+        values.put("PomeloSeed", 5000);                 // P50
+        values.put("MangoSeed", 3000);                  // P30
+        values.put("MangosteenSeed", 7500);             // P75
+        values.put("DurianSeed", 6000);                 // P60
+        values.put("CornSeed", 38889);                  // P388.89
+        values.put("EggplantSeed", 820000);             // P8200
+        values.put("SquashSeed", 300000);               // P3000
+        values.put("StrawberrySeed", 300);              // P3
+        values.put("TomatoSeed", 950000);               // P9500
+        values.put("Coconut", 1689);                    // P16.89
+        values.put("Banana", 5100);                     // P51
+        values.put("Durian", 15000);                    // P150
+        values.put("Pomelo", 20000);                    // P200
+        values.put("Cacao", 27527);                     // P275.27
+        values.put("Pineapple", 5000);                  // P50
+        values.put("Mangosteen", 5000);                 // P50
+        values.put("Mango", 11800);                     // P118
+        values.put("Corn", 1500);                       // P15
+        values.put("Eggplant", 6200);                   // P62
+        values.put("Squash", 4200);                     // P42
+        values.put("Strawberry", 35000);                // P350
+        values.put("Tomato", 15600);                    // P156
+        values.put("AphidTrap", 3500);                  // P35
+        values.put("InsecticideLiter", 9000);           // P90
+        values.put("DisinfectantLiter", 8000);          // P80
+        values.put("NeemSoapLiter", 10000);             // P100
+        values.put("BtBioInsecticideLiter", 13000);     // P130
+        values.put("CopperFungicideLiter", 12000);      // P120
+        values.put("PheromoneTrap", 9000);              // P90
+        values.put("FruitBag", 2500);                   // P25
+        values.put("DrainageKit", 15000);               // P150
+        values.put("TermiteBaitStation", 11000);        // P110
         return Map.copyOf(values);
     }
 }

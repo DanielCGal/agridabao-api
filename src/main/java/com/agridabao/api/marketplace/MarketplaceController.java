@@ -5,6 +5,7 @@ import com.agridabao.api.error.ConflictException;
 import com.agridabao.api.error.ForbiddenException;
 import com.agridabao.api.error.NotFoundException;
 import com.agridabao.api.farm.EconomyJsonService;
+import com.agridabao.api.farm.PesoRounding;
 import com.agridabao.api.farm.FarmSave;
 import com.agridabao.api.user.AppUser;
 import com.agridabao.api.user.AppUserRepository;
@@ -278,11 +279,16 @@ class MarketplaceService {
         if (quantity <= 0 || askingPrice < 0) {
             throw new BadRequestException("Quantity must be positive and price cannot be negative.");
         }
-        int base = economy.baseValue(itemType);
-        long itemTotal = (long) base * quantity;
+        int baseCentavos = economy.baseValueCentavos(itemType);
+        // Base values are held in centavos but the fee comes out of a whole-peso
+        // wallet, so the items' total is rounded once, here - the same way the game
+        // rounds it when it shows the player the fee.
+        long itemTotal = PesoRounding.toWholePesos((long) baseCentavos * quantity);
         long fee = itemTotal + askingPrice;
         if (fee > Integer.MAX_VALUE) throw new BadRequestException("The calculated listing fee is too large.");
-        return new ListingFeeResponse(base, (int) itemTotal, askingPrice, (int) fee);
+        // Whole pesos, for anything still reading this field as pesos.
+        int baseWholePesos = (int) PesoRounding.toWholePesos(baseCentavos);
+        return new ListingFeeResponse(baseWholePesos, (int) itemTotal, askingPrice, (int) fee);
     }
 
     @Transactional(readOnly = true)
