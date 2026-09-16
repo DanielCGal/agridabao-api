@@ -36,7 +36,9 @@ public final class DistrictSeedPools {
             "Paquibato", Set.of("CornSeed", "BananaSeed", "CoconutSeed", "CacaoSeed"),
             "Marilog", Set.of("TomatoSeed", "SquashSeed", "EggplantSeed", "StrawberrySeed",
                     "MangosteenSeed"),
-            "Buhangin", Set.of("CoconutSeed", "CacaoSeed", "BananaSeed", "CornSeed")));
+            "Buhangin", Set.of("CoconutSeed", "CacaoSeed", "BananaSeed", "CornSeed"),
+            "Tugbok", Set.of("BananaSeed", "CacaoSeed", "CoconutSeed", "MangosteenSeed",
+                    "CornSeed", "DurianSeed", "MangoSeed")));
 
     /** For a farm whose district is missing or unrecognised - the same four as the game. */
     private static final Set<String> FALLBACK =
