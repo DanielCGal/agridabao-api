@@ -11,6 +11,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -118,7 +119,7 @@ public class VerificationService {
     private EmailVerification validateAndConsume(String email, UUID userId,
                                                  String code, VerificationPurpose purpose) {
         Instant now = Instant.now();
-        EmailVerification record = findLive(email, userId, purpose)
+        EmailVerification record = lockLive(email, userId, purpose)
                 .orElseThrow(() -> new UnauthorizedException(
                         "Your code has expired or was not found. Please request a new one."));
 
@@ -164,6 +165,20 @@ public class VerificationService {
         return isUserScoped(purpose)
                 ? repository.findFirstByUserIdAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(userId, purpose)
                 : repository.findFirstByEmailAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(email, purpose);
+    }
+
+    /**
+     * {@link #findLive}, but holding the code's row until the transaction ends.
+     *
+     * Every check of a code goes through here, so checks of the same code run one
+     * at a time and the attempt limit still holds when guesses are sent together.
+     * The consume methods are transactional, which the lock needs.
+     */
+    private Optional<EmailVerification> lockLive(String email, UUID userId, VerificationPurpose purpose) {
+        List<EmailVerification> live = isUserScoped(purpose)
+                ? repository.findLockedByUserIdAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(userId, purpose)
+                : repository.findLockedByEmailAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(email, purpose);
+        return live.stream().findFirst();
     }
 
     private static boolean isUserScoped(VerificationPurpose purpose) {
