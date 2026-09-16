@@ -72,6 +72,15 @@ public class TradeController {
         return service.incoming(userId(jwt));
     }
 
+    // One trade in whatever state it ended. /active lists only open trades, so a
+    // trade the other player completes just disappears from there; this is how
+    // the game finds out it completed and brings the exchange into the backpack.
+    @GetMapping("/{tradeId}")
+    public TradeView get(@AuthenticationPrincipal Jwt jwt,
+                         @PathVariable UUID tradeId) {
+        return service.get(userId(jwt), tradeId);
+    }
+
     @PostMapping("/invite")
     public TradeView invite(@AuthenticationPrincipal Jwt jwt,
                             @Valid @RequestBody TradeInviteRequest request) {
@@ -334,6 +343,16 @@ class TradeService {
                 .filter(value -> value.getExpiresAt().isAfter(Instant.now()))
                 .map(value -> view(value, currentUserId, null))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TradeView get(UUID currentUserId, UUID tradeId) {
+        TradeSession trade = repository.findById(tradeId)
+                .orElseThrow(() -> new NotFoundException("Trade session not found."));
+        if (!trade.includes(currentUserId)) {
+            throw new ForbiddenException("You are not a participant in this trade.");
+        }
+        return view(trade, currentUserId, null);
     }
 
     @Transactional
