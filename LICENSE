@@ -1,0 +1,21 @@
+Copyright (c) 2026 Daniel C. Galam and Jessica Mae G. Suello.
+All rights reserved.
+
+AgriDabaw-3D: A Simulation Game with AI-Advisor for Localized Farming Techniques.
+Undergraduate capstone project, Assumption College of Davao.
+Adviser: Mr. Dennis B. Gajo, MIT.
+
+This repository holds the game's backend server. Its source is public so that
+the capstone panel, the college and other readers can review it.
+
+No permission is granted to copy, modify, merge, publish, distribute, sublicense
+or sell this software, or to run it as a service, without the written permission
+of the copyright holders. Reading the code and citing the project in academic
+work are welcome; please cite the paper rather than copying the source.
+
+Third-party libraries and data keep their own licences and terms. They are listed
+in THIRD-PARTY-NOTICES.md, and nothing in this notice limits the rights those
+licences grant in their own material.
+
+To make this project reusable later, replace this file with the licence of your
+choice, such as the MIT or Apache 2.0 licence.
