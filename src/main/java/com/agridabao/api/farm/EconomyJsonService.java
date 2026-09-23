@@ -22,13 +22,22 @@ public class EconomyJsonService {
             "BtBioInsecticideLiter", "CopperFungicideLiter"
     );
 
+    /**
+     * Must match {@code SocialMarketplaceCatalog.TradableItems} in the game. The
+     * five retired seed items (banana, coconut, mango, pineapple and strawberry
+     * seed) stay tradable here only so older versions of the game keep working;
+     * the current game turns any it receives into the material that replaced it.
+     */
     private static final Set<String> TRADABLE_ITEMS = Set.of(
-            "CoconutSeed", "Coconut", "BananaSeed", "Banana",
+            "CoconutSeed", "CoconutSeednut", "Coconut",
+            "BananaSeed", "BananaPlantlet", "BananaSucker", "Banana",
             "DurianSeed", "Durian", "PomeloSeed", "Pomelo",
-            "CacaoSeed", "Cacao", "PineappleSeed", "Pineapple",
-            "MangosteenSeed", "Mangosteen", "MangoSeed", "Mango",
+            "CacaoSeed", "Cacao", "PineappleSeed", "PineappleSucker", "Pineapple",
+            "MangosteenSeed", "Mangosteen",
+            "MangoSeed", "MangoGraftedSeedling", "MangoLiso", "Mango",
             "CornSeed", "Corn", "EggplantSeed", "Eggplant",
-            "SquashSeed", "Squash", "StrawberrySeed", "Strawberry",
+            "SquashSeed", "SquashSeedling", "Squash",
+            "StrawberrySeed", "StrawberryRunner", "Strawberry",
             "TomatoSeed", "Tomato", "AphidTrap", "InsecticideLiter",
             "DisinfectantLiter", "NeemSoapLiter", "BtBioInsecticideLiter",
             "CopperFungicideLiter", "PheromoneTrap", "FruitBag",
@@ -297,8 +306,14 @@ public class EconomyJsonService {
         slot.put("sprayerLiquid", "None");
     }
 
+    /** Must match {@code PlayerInventory.GetMaxStack} in the game. */
     private static int maxStack(String itemType) {
-        return LIQUID_ITEMS.contains(itemType) ? 1 : 999;
+        if (LIQUID_ITEMS.contains(itemType)) {
+            return 1;
+        }
+        // The game caps a stack of aphid traps at 99. A bigger stack written here
+        // was loaded into one slot anyway, past the game's own limit.
+        return "AphidTrap".equals(itemType) ? 99 : 999;
     }
 
     /**
@@ -324,6 +339,17 @@ public class EconomyJsonService {
         values.put("SquashSeed", 300000);               // P3000
         values.put("StrawberrySeed", 300);              // P3
         values.put("TomatoSeed", 950000);               // P9500
+        // Planting materials. The five that replaced the retired seeds above keep
+        // that seed's price; the plantlet, the grafted seedling and the ready
+        // squash seedling are priced above the material they skip ahead of.
+        values.put("BananaPlantlet", 3000);             // P30
+        values.put("BananaSucker", 1500);               // P15
+        values.put("MangoGraftedSeedling", 8000);       // P80
+        values.put("MangoLiso", 3000);                  // P30
+        values.put("CoconutSeednut", 1500);             // P15
+        values.put("PineappleSucker", 1000);            // P10
+        values.put("StrawberryRunner", 300);            // P3
+        values.put("SquashSeedling", 330000);           // P3300
         values.put("Coconut", 1689);                    // P16.89
         values.put("Banana", 5100);                     // P51
         values.put("Durian", 15000);                    // P150
