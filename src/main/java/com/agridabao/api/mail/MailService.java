@@ -17,18 +17,8 @@ import java.util.Base64;
 @Service
 public class MailService {
     private static final Logger log = LoggerFactory.getLogger(MailService.class);
-    // JPEG rather than PNG: the banner is a photographic image with no
-    // transparency, and the PNG it replaced was 5.2 MB - 2752px wide for a
-    // banner drawn at 500. Every send base64-encoded that to roughly 7 MB, so
-    // MAX_INLINE_IMAGE_BYTES below dropped it and the emails went out with a
-    // broken image. At 1000px and quality 85 it is 137 KB and still 2x the
-    // width it is displayed at.
     private static final String HEADER_IMAGE = "email/header.jpg";
 
-    /**
-     * Gmail clips messages larger than ~102 KB and big inline images make every
-     * send slow, so an oversized header is dropped rather than shipped.
-     */
     private static final long MAX_INLINE_IMAGE_BYTES = 400_000L;
 
     private final JavaMailSender mailSender;
@@ -72,7 +62,6 @@ public class MailService {
                 "email/password-reset-code.html", code, "password reset");
     }
 
-    /** Sent to the address being moved TO, which is the one being proven. */
     public void sendEmailChangeCode(String newEmail, String code) {
         send(newEmail, "Confirm Your New GreenScape Email",
                 "email/email-change-code.html", code, "email change");
@@ -93,7 +82,6 @@ public class MailService {
             return;
         }
 
-        // Preferred on cloud hosts: HTTPS instead of a blocked SMTP port.
         if (resend.isEnabled()) {
             try {
                 sendViaResend(to, subject, templatePath, code, label);
@@ -110,8 +98,6 @@ public class MailService {
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            // RELATED (not MIXED) since the header image is an inline resource, not a
-            // real attachment; MIXED would nest it in a way some clients list as one.
             MimeMessageHelper helper = new MimeMessageHelper(
                     message, MimeMessageHelper.MULTIPART_MODE_RELATED, StandardCharsets.UTF_8.name());
             helper.setTo(to);
@@ -161,16 +147,10 @@ public class MailService {
             log.warn("Header image not found at classpath:{}; sending email without it.", HEADER_IMAGE);
         }
 
-        // The filename has to match the real format: some mail clients decide how
-        // to decode an attachment from its extension, not its bytes.
         resend.send(from, fromName, to, subject, html, imageBase64, "header.jpg", "header");
         log.info("Sent {} email to {}.", label, to);
     }
 
-    /**
-     * True when any transport can actually deliver: the Resend API key, or a
-     * complete SMTP username/password pair.
-     */
     private boolean isConfigured() {
         if (resend.isEnabled())
             return true;

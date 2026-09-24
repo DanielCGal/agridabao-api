@@ -38,11 +38,6 @@ public class AuthController {
         return authService.verifyLogin(request);
     }
 
-    // Password recovery, in three steps: prove the account exists and email a
-    // code, confirm the code for a short-lived ticket, then spend the ticket on
-    // a new password. Splitting the last two means the player types the new
-    // password on its own screen, after the code has already been accepted.
-
     @PostMapping("/password/forgot/request")
     public CodeRequestResponse requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
         return authService.requestPasswordReset(request);

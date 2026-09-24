@@ -59,7 +59,6 @@ public class VerificationService {
         return createCode(email, VerificationPurpose.PASSWORD_RESET, userId, null, null, null);
     }
 
-    /** {@code newEmail} is where the code is sent - the address being moved to. */
     @Transactional
     public String createEmailChangeCode(String newEmail, UUID userId) {
         return createCode(newEmail, VerificationPurpose.EMAIL_CHANGE, userId, null, null, null);
@@ -81,7 +80,6 @@ public class VerificationService {
         validateAndConsume(email, null, code, VerificationPurpose.PASSWORD_RESET);
     }
 
-    /** Returns the address the account is moving to, once its code checks out. */
     @Transactional(noRollbackFor = {UnauthorizedException.class})
     public String consumeEmailChangeCode(UUID userId, String code) {
         return validateAndConsume(null, userId, code, VerificationPurpose.EMAIL_CHANGE).getEmail();
@@ -92,7 +90,6 @@ public class VerificationService {
         Instant now = Instant.now();
         enforceResendCooldown(email, userId, purpose, now);
 
-        // Only one live code per subject+purpose: replace any earlier ones.
         if (isUserScoped(purpose)) {
             repository.deleteByUserIdAndPurpose(userId, purpose);
         } else {
@@ -153,27 +150,12 @@ public class VerificationService {
         });
     }
 
-    /**
-     * An email change is looked up by account, every other purpose by address.
-     *
-     * The address is the wrong key for a change: the code is sent to one the
-     * account does not own yet, and a player who mistypes it and tries again
-     * would otherwise leave the first attempt live and be able to confirm the
-     * typo'd address afterwards.
-     */
     private Optional<EmailVerification> findLive(String email, UUID userId, VerificationPurpose purpose) {
         return isUserScoped(purpose)
                 ? repository.findFirstByUserIdAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(userId, purpose)
                 : repository.findFirstByEmailAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(email, purpose);
     }
 
-    /**
-     * {@link #findLive}, but holding the code's row until the transaction ends.
-     *
-     * Every check of a code goes through here, so checks of the same code run one
-     * at a time and the attempt limit still holds when guesses are sent together.
-     * The consume methods are transactional, which the lock needs.
-     */
     private Optional<EmailVerification> lockLive(String email, UUID userId, VerificationPurpose purpose) {
         List<EmailVerification> live = isUserScoped(purpose)
                 ? repository.findLockedByUserIdAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(userId, purpose)

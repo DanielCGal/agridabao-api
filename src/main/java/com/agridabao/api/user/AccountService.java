@@ -17,13 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/**
- * The three things a signed-in player can change about their account.
- *
- * Kept apart from AuthService because everything here already knows who is
- * asking: the caller arrives with a valid token, so none of it has to guard
- * against account enumeration the way sign-in and recovery do.
- */
 @Service
 public class AccountService {
     private final AppUserRepository userRepository;
@@ -54,13 +47,6 @@ public class AccountService {
         return UserResponse.from(require(userId));
     }
 
-    /**
-     * Step 1 of changing an address: email a code to the NEW one.
-     *
-     * Sending to the new address rather than the current one is the whole point
-     * - it proves the player can actually receive mail there, so a typo cannot
-     * strand an account at an address nobody reads.
-     */
     @Transactional
     public CodeRequestResponse requestEmailChange(UUID userId, ChangeEmailRequest request) {
         AppUser user = require(userId);
@@ -84,21 +70,11 @@ public class AccountService {
                 newEmail);
     }
 
-    /**
-     * Step 2: move the account across.
-     *
-     * A fresh token comes back with it. The old one keeps working - it names the
-     * account by id, not by address - but it still carries the previous address
-     * in its claims, and handing back a matching pair keeps the copy saved on the
-     * phone from disagreeing with the account.
-     */
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public AuthResponse confirmEmailChange(UUID userId, ConfirmEmailChangeRequest request) {
         AppUser user = require(userId);
         String newEmail = verificationService.consumeEmailChangeCode(userId, request.code().trim());
 
-        // Rechecked after the code is accepted: the code is good for ten minutes
-        // and somebody else may have registered that address in the meantime.
         if (userRepository.existsByEmail(newEmail)) {
             throw new ConflictException(
                     "Someone claimed that email while you were confirming. Please try another.");
@@ -119,14 +95,6 @@ public class AccountService {
                 UserResponse.from(user));
     }
 
-    /**
-     * Changes the password and, with it, ends every other session on the
-     * account - see AppUser.changePasswordHash.
-     *
-     * A fresh token comes back because the change retires the one the caller
-     * used to make it. Without that they would be signed out by their own
-     * password change, which is the opposite of what pressing the button means.
-     */
     @Transactional
     public AuthResponse changePassword(UUID userId, ChangePasswordRequest request) {
         AppUser user = require(userId);
@@ -164,8 +132,6 @@ public class AccountService {
             throw new ConflictException("That is already your display name.");
         }
 
-        // Excluding this account so a player can restyle their own name -
-        // "juan" to "Juan" - without colliding with themselves.
         if (userRepository.existsByDisplayNameIgnoreCaseAndIdNot(displayName, userId)) {
             throw new ConflictException("That display name is already taken. Please choose another.");
         }

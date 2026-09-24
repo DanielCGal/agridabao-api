@@ -53,16 +53,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * The decoder the Authorization header is checked with.
-     *
-     * Deliberately not the {@link JwtDecoder} bean below. The password-reset
-     * ticket is signed with the same key as an access token, so a plain decoder
-     * would happily accept one as a bearer token and hand a half-finished reset
-     * the run of the API. This one additionally insists the token says it is an
-     * access token; JwtService keeps the unrestricted decoder so it can still
-     * read the ticket on the reset endpoint itself.
-     */
     private static JwtDecoder accessTokenDecoder(SecretKey secretKey,
                                                  ObjectProvider<AppUserRepository> users) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey)
@@ -80,8 +70,6 @@ public class SecurityConfig {
     private static OAuth2TokenValidatorResult requireAccessPurpose(Jwt jwt) {
         String purpose = jwt.getClaimAsString(JwtService.PURPOSE_CLAIM);
 
-        // Absent counts as an access token: every token issued before the claim
-        // existed lacks it, and they stay valid for their full 30 days.
         if (purpose == null || JwtService.PURPOSE_ACCESS.equals(purpose)) {
             return OAuth2TokenValidatorResult.success();
         }
@@ -90,21 +78,6 @@ public class SecurityConfig {
                 "invalid_token", "This token cannot be used to call the API.", null));
     }
 
-    /**
-     * Refuses a token that was issued before the account's last password change.
-     *
-     * This is the one thing a stateless token cannot do on its own. Everything
-     * else about a token is settled by its signature and its expiry, but "has
-     * this session been revoked since" can only be answered by the account, so
-     * this costs one lookup by primary key per authenticated request. That is
-     * the price of being able to end a session at all, and it is worth paying:
-     * without it, changing a password locks an intruder out of signing in again
-     * but leaves the session they already have running for up to thirty days.
-     *
-     * The repository is resolved lazily. The decoder is built while the security
-     * filter chain is being assembled, which is earlier than the JPA layer is
-     * ready, and asking for the bean then would fail.
-     */
     private static OAuth2TokenValidatorResult requireCurrentTokenVersion(
             Jwt jwt, ObjectProvider<AppUserRepository> users) {
         UUID userId;
@@ -116,9 +89,6 @@ public class SecurityConfig {
 
         AppUserRepository repository = users.getIfAvailable();
         if (repository == null) {
-            // Nothing to check against. Refusing every request would take the
-            // whole API down over a startup ordering problem, which is a far
-            // worse failure than one session outliving a password change.
             return OAuth2TokenValidatorResult.success();
         }
 

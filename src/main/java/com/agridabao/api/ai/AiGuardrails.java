@@ -1,28 +1,7 @@
 package com.agridabao.api.ai;
 
-/**
- * The rules the adviser is held to, enforced here rather than in the game.
- *
- * The prompt the phone sends is deliberately tunable in Unity's Inspector, which
- * is convenient and also means it ships inside the APK: anyone who unpacks a
- * build can replace it, and the server would forward whatever came back. A
- * guardrail written there is a request, not a rule. This one is prepended on the
- * server to whatever the client supplies, so the floor holds no matter what the
- * phone asks for - the client's own text is admitted afterwards as style
- * guidance and is explicitly ranked below these rules.
- *
- * Only the free-form adviser gets this treatment. The climate write-up and the
- * two task features are driven entirely by game state rather than by anything a
- * player types, so they have no injection surface to defend and their prompts
- * are passed through untouched.
- */
 final class AiGuardrails {
 
-    /**
-     * What Antonio says when asked something outside farming. Kept in his own
-     * voice: a refusal that reads as a system message breaks the character the
-     * rest of the game maintains.
-     */
     static final String REFUSAL =
             "Antonio only knows farming, friend. Ask me about your crops, your soil, or the weather.";
 
@@ -81,12 +60,6 @@ final class AiGuardrails {
     private AiGuardrails() {
     }
 
-    /**
-     * The system instruction actually sent upstream: the server's rules first,
-     * then the client's wording preferences, clearly subordinate.
-     *
-     * @param clientInstruction the phone's own guidance, which may be null
-     */
     static String systemInstructionFor(AiFeature feature, String clientInstruction) {
         String supplied = clientInstruction == null ? "" : clientInstruction.trim();
 
@@ -97,18 +70,6 @@ final class AiGuardrails {
         return supplied.isEmpty() ? ADVISOR : ADVISOR + "\n" + supplied;
     }
 
-    /**
-     * Marks a player's question off as quoted material.
-     *
-     * The question used to be pasted straight into a sentence, so text shaped
-     * like the surrounding prompt was read as part of it - a player could close
-     * the question and open something that looked like a fresh instruction. The
-     * fence gives the model an unambiguous end, and rule 3 above tells it what
-     * everything inside is worth.
-     *
-     * The fence token is stripped from the player's own text first, so it cannot
-     * be closed early by typing it.
-     */
     static String fencePlayerQuestion(String question) {
         String cleaned = question == null ? "" : question.replace(FENCE, " ");
 

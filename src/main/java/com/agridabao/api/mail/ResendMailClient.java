@@ -15,13 +15,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
-/**
- * Sends mail through Resend's HTTPS API instead of SMTP.
- *
- * Cloud hosts (Railway, Render, Fly) block outbound SMTP ports to prevent spam,
- * so JavaMailSender times out there. This client talks to port 443, which is
- * never blocked, and is selected automatically whenever an API key is present.
- */
 @Component
 public class ResendMailClient {
     private static final Logger log = LoggerFactory.getLogger(ResendMailClient.class);
@@ -42,10 +35,6 @@ public class ResendMailClient {
         return !apiKey.isBlank();
     }
 
-    /**
-     * @param inlineImage optional base64 payload for the template's cid:header
-     *                    image; pass null to send without it.
-     */
     public void send(String fromAddress,
                      String fromName,
                      String to,
@@ -67,7 +56,6 @@ public class ResendMailClient {
             ObjectNode image = attachments.addObject();
             image.put("filename", inlineImageFilename);
             image.put("content", inlineImageBase64);
-            // Matches src="cid:header" in the HTML templates.
             image.put("content_id", inlineImageContentId);
         }
 

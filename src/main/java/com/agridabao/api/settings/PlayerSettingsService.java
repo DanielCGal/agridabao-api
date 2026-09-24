@@ -13,19 +13,14 @@ public class PlayerSettingsService {
     static final float DEFAULT_AMBIENCE = 0.5f;
     static final float DEFAULT_RENDER = 30f;
 
-    /** 1 is the size the game has always drawn at, so this is "unchanged". */
     static final float DEFAULT_UI_SCALE = 1f;
     static final float DEFAULT_TEXT_SCALE = 1f;
 
-    /** Off is the adviser's existing full-length answer. */
     static final boolean DEFAULT_AI_SUMMARIZATION = false;
 
     private static final float RENDER_MIN = 8f;
     private static final float RENDER_MAX = 60f;
 
-    // Mirrors GameSettings on the Unity side. The interface ceiling is bounded by
-    // the tallest panel still fitting once the canvas reference resolution shrinks;
-    // the text ceiling is lower because an oversized label wraps inside its rect.
     private static final float UI_SCALE_MIN = 0.80f;
     private static final float UI_SCALE_MAX = 1.20f;
     private static final float TEXT_SCALE_MIN = 0.80f;
@@ -57,10 +52,6 @@ public class PlayerSettingsService {
 
         PlayerSettings settings = repository.findById(userId).orElse(null);
 
-        // A client that predates the scale fields sends neither, and Jackson leaves
-        // an absent float at 0. Clamping that would silently rewrite the player's
-        // interface to the minimum, so a non-positive value means "leave it alone":
-        // keep what is stored, or the default for a brand-new row.
         float currentUiScale = settings != null ? settings.getUiScale() : DEFAULT_UI_SCALE;
         float currentTextScale = settings != null ? settings.getTextScale() : DEFAULT_TEXT_SCALE;
 

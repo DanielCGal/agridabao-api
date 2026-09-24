@@ -95,13 +95,11 @@ public class MarketplaceController {
         return service.cancelOrClaim(userId(jwt), listingId);
     }
 
-    /** Sales this player has not been notified about yet. */
     @GetMapping("/sales/unseen")
     public List<MarketplaceSaleNotificationResponse> unseenSales(@AuthenticationPrincipal Jwt jwt) {
         return service.unseenSales(userId(jwt));
     }
 
-    /** Marks one sale notification as shown so it is not repeated. */
     @PostMapping("/sales/{listingId}/acknowledge")
     public void acknowledgeSale(@AuthenticationPrincipal Jwt jwt,
                                 @PathVariable UUID listingId) {
@@ -144,7 +142,6 @@ record MarketplacePurchaseResponse(
         int buyerMoney
 ) { }
 
-/** One "your listing sold" notification, shown to the seller once. */
 record MarketplaceSaleNotificationResponse(
         UUID listingId,
         String buyerDisplayName,
@@ -191,7 +188,6 @@ class MarketplaceListing {
     @Column(name = "buyer_id")
     private UUID buyerId;
 
-    /** False until the seller has been shown the "your item sold" notification. */
     @Column(name = "sale_acknowledged", nullable = false)
     private boolean saleAcknowledged;
 
@@ -227,7 +223,6 @@ class MarketplaceListing {
         this.status = ListingStatus.SOLD;
         this.buyerId = buyerId;
         this.soldAt = now;
-        // The seller has not seen this yet; the notification endpoint clears it.
         this.saleAcknowledged = false;
     }
 
@@ -245,7 +240,6 @@ interface MarketplaceListingRepository extends JpaRepository<MarketplaceListing,
     List<MarketplaceListing> findBySellerIdAndStatusOrderByCreatedAtDesc(
             UUID sellerId, ListingStatus status);
 
-    /** Sales this seller has not been shown yet, oldest first. */
     List<MarketplaceListing> findBySellerIdAndStatusAndSaleAcknowledgedFalseOrderBySoldAtAsc(
             UUID sellerId, ListingStatus status);
 
@@ -280,13 +274,9 @@ class MarketplaceService {
             throw new BadRequestException("Quantity must be positive and price cannot be negative.");
         }
         int baseCentavos = economy.baseValueCentavos(itemType);
-        // Base values are held in centavos but the fee comes out of a whole-peso
-        // wallet, so the items' total is rounded once, here - the same way the game
-        // rounds it when it shows the player the fee.
         long itemTotal = PesoRounding.toWholePesos((long) baseCentavos * quantity);
         long fee = itemTotal + askingPrice;
         if (fee > Integer.MAX_VALUE) throw new BadRequestException("The calculated listing fee is too large.");
-        // Whole pesos, for anything still reading this field as pesos.
         int baseWholePesos = (int) PesoRounding.toWholePesos(baseCentavos);
         return new ListingFeeResponse(baseWholePesos, (int) itemTotal, askingPrice, (int) fee);
     }
@@ -311,9 +301,6 @@ class MarketplaceService {
                 combined.add(pending);
             }
         }
-        // A seed the viewer's district does not grow is not shown to them - they could
-        // not buy it anyway. Their own listings always show, so they can still cancel
-        // or claim them whatever they hold.
         String viewerDistrict = economy.districtOf(currentUserId);
         return combined.stream()
                 .filter(listing -> listing.getSellerId().equals(currentUserId) ||
@@ -440,10 +427,6 @@ class MarketplaceService {
         repository.save(listing);
     }
 
-    /**
-     * Sales the seller has not seen yet. Read-only: the client acknowledges them
-     * separately, so a dropped response does not lose the notification.
-     */
     @Transactional(readOnly = true)
     public List<MarketplaceSaleNotificationResponse> unseenSales(UUID sellerId) {
         return repository
@@ -455,8 +438,6 @@ class MarketplaceService {
                         displayNameOf(listing.getBuyerId()),
                         listing.getItemType(),
                         listing.getQuantity(),
-                        // The seller receives the asking price; the listing fee was
-                        // already paid up front when the listing was created.
                         listing.getAskingPrice(),
                         listing.getSoldAt()))
                 .toList();

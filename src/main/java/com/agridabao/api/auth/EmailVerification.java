@@ -24,11 +24,6 @@ public class EmailVerification {
     @Column(nullable = false, length = 20)
     private VerificationPurpose purpose;
 
-    /**
-     * The account this code belongs to, for the purposes that already know it
-     * (password reset, email change). Null for SIGNUP - there is no account
-     * yet - and for LOGIN, where the address alone identifies the account.
-     */
     @Column(name = "user_id")
     private UUID userId;
 

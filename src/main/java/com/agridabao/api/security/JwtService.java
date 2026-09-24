@@ -19,30 +19,12 @@ import java.util.UUID;
 
 @Service
 public class JwtService {
-    /**
-     * Names what a token may be used for. Access tokens issued before this
-     * claim existed carry nothing, which {@link #PURPOSE_ACCESS} stands in for -
-     * see AccessTokenPurposeValidator, which is what actually keeps a
-     * single-purpose ticket out of the ordinary Authorization header.
-     */
     public static final String PURPOSE_CLAIM = "purpose";
     public static final String PURPOSE_ACCESS = "access";
     public static final String PURPOSE_PASSWORD_RESET = "password_reset";
 
-    /**
-     * The account's token version at the moment this token was issued. The
-     * server compares it against the account on every request, so a password
-     * change - which increments the account's - retires every token issued
-     * before it. Absent means zero: tokens minted before this claim existed keep
-     * working until their account's first password change.
-     */
     public static final String VERSION_CLAIM = "ver";
 
-    /**
-     * How long the player has to choose a new password after their emailed code
-     * checks out. Short on purpose: the ticket is proof of a passed check, so it
-     * is worth as much as the code was, and it only has to survive one screen.
-     */
     private static final Duration RESET_TICKET_DURATION = Duration.ofMinutes(15);
 
     private final JwtEncoder jwtEncoder;
@@ -77,14 +59,6 @@ public class JwtService {
         return new IssuedToken(encode(claims), expiresAt);
     }
 
-    /**
-     * Proof that this player answered the emailed reset code, handed to them so
-     * the next screen can set a new password without asking for the code again.
-     *
-     * It is signed with the same key as an access token, so the resource server
-     * would otherwise accept it as one; the purpose claim above is what stops
-     * that, and it is the reason this ticket is safe to hand out at all.
-     */
     public String issueResetTicket(AppUser user) {
         Instant now = Instant.now();
 
@@ -99,7 +73,6 @@ public class JwtService {
         return encode(claims);
     }
 
-    /** The account a reset ticket belongs to, or a 401 if it is not one. */
     public UUID readResetTicket(String token) {
         if (token == null || token.isBlank()) {
             throw new UnauthorizedException("Your password reset session has expired. Please start again.");

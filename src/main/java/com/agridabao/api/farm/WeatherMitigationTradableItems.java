@@ -1,11 +1,5 @@
 package com.agridabao.api.farm;
 
-/**
- * Additional marketplace/trade item rules for climate and weather mitigation.
- *
- * This class is deliberately package-private. EconomyJsonService calls it before
- * applying its original item whitelist and base-value rules.
- */
 final class WeatherMitigationTradableItems {
     private WeatherMitigationTradableItems() {
     }

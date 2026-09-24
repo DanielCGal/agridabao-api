@@ -12,26 +12,14 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** What a queued command asks the receiving game to do. */
 enum AdminCommandType {
-    /** Add pesos to the player's wallet. Uses amount. */
     GRANT_MONEY,
-    /** Start a weather event. Uses payload for the type and durationDays. */
     FORCE_WEATHER,
-    /** Start a pest or disease outbreak. Uses payload for the enum name. */
     FORCE_PEST_DISEASE,
-    /** Push the farm clock forward whole days. Uses amount. */
     PASS_DAYS,
-    /** Push the farm clock forward whole hours. Uses amount. */
     PASS_HOURS
 }
 
-/**
- * One instruction waiting for one player.
- *
- * Rows are kept after delivery rather than deleted, so there is a record of
- * what was sent to whom during a test session.
- */
 @Entity
 @Table(name = "admin_command")
 class AdminCommand {

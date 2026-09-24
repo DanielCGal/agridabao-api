@@ -1,6 +1,4 @@
 server:
-  # Cloud hosts (Railway, Render, Fly) inject the port to bind as $PORT. Binding a
-  # fixed 8080 there makes the health check fail and the deploy gets killed.
   port: ${PORT:8080}
   address: 0.0.0.0
   forward-headers-strategy: framework
@@ -20,8 +18,6 @@ spring:
           auth: true
           starttls:
             enable: true
-          # Without these a blocked SMTP port hangs the request for minutes
-          # instead of failing fast. 10s is plenty for a reachable server.
           connectiontimeout: ${MAIL_CONNECT_TIMEOUT_MS:10000}
           timeout: ${MAIL_READ_TIMEOUT_MS:10000}
           writetimeout: ${MAIL_WRITE_TIMEOUT_MS:10000}
@@ -52,37 +48,20 @@ management:
       exposure:
         include: health,info
   health:
-    # Spring auto-registers a mail health check whenever spring-boot-starter-mail
-    # is present. Cloud hosts block outbound SMTP, so that check fails there and
-    # drags the whole /actuator/health to DOWN even though the API is serving
-    # fine. Mail reachability is not a liveness condition for this service.
     mail:
       enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
 
 app:
   ai:
-    # Master switch for the in-game AI adviser. Set APP_AI_ENABLED=false to stop
-    # the server calling Gemini at all - the game then shows "Antonio is busy"
-    # instead of an answer. Useful for capping spend or during a demo.
     enabled: ${APP_AI_ENABLED:true}
 
     gemini:
-      # The key now lives here rather than in the Unity build. A Unity APK ships
-      # its Inspector values inside the package, so a key held on a MonoBehaviour
-      # can be extracted by unpacking it; server-side it never leaves the host.
       api-key: ${GEMINI_API_KEY:}
       model: ${GEMINI_MODEL:gemini-2.5-flash}
 
   jwt:
     issuer: agridabao-api
     secret-base64: ${APP_JWT_SECRET_BASE64}
-    # 30 days. The phone keeps its token so a returning player goes straight to
-    # the menu, and a 24-hour token would have sent anyone away for a day back to
-    # the login screen without them ever having logged out.
-    #
-    # The cost is that a token lifted off a device stays valid for that long and
-    # nothing revokes it early - pressing Logout only clears the phone's copy.
-    # Overridable per environment through APP_ACCESS_TOKEN_MINUTES.
     access-token-minutes: ${APP_ACCESS_TOKEN_MINUTES:43200}
 
   mail:
@@ -90,42 +69,16 @@ app:
     from-name: ${MAIL_FROM_NAME:Team GreenScape}
 
     resend:
-      # When set, mail goes out over Resend's HTTPS API instead of SMTP. Required
-      # on cloud hosts, which block outbound SMTP ports. Leave empty locally to
-      # keep using Gmail SMTP.
       api-key: ${RESEND_API_KEY:}
 
   admin:
-    # Comma-separated addresses allowed to use /api/admin, which can delete any
-    # account and everything belonging to it. Empty means nobody, not everybody:
-    # with this unset the endpoints refuse every caller. That is the safe way to
-    # fail - forgetting to set it costs one confusing error, while the opposite
-    # default would give every player in the game a way to delete anyone.
     emails: ${APP_ADMIN_EMAILS:}
 
-    # Whether an admin account may open the developer tools on a phone. Off by
-    # default and separate from the list above, so the tools can be granted to
-    # a laptop without also arming them on every device that account signs in
-    # on. Turn it on for a test session, off again afterwards.
-    #
-    # Worth being clear about what this does and does not buy: the tools' local
-    # actions - money, seeds, skipping days - are simulated on the phone, so a
-    # rebuilt APK could do them whatever this says. What it protects is the
-    # ordinary build, where the button simply is not there. The destructive
-    # actions - deleting an account, sending events to another player - are
-    # gated on the email list server-side and are unaffected by this.
     mobile-tools: ${APP_ADMIN_MOBILE_TOOLS:false}
 
   verification:
-    # Six digits, the length most emailed codes use: beta testers found nine
-    # hard to carry from the email into the game. A shorter code leans harder on
-    # max-attempts and ttl-minutes below to stay out of reach of guessing.
     code-length: ${APP_VERIFICATION_CODE_LENGTH:6}
     ttl-minutes: ${APP_VERIFICATION_TTL_MINUTES:10}
     max-attempts: ${APP_VERIFICATION_MAX_ATTEMPTS:5}
     resend-cooldown-seconds: ${APP_VERIFICATION_RESEND_COOLDOWN_SECONDS:30}
-    # Dev only: when true the code is logged to the console AND returned in the
-    # request-step response so testing works without a real inbox.
-    # Defaults to FALSE so a deployed server never hands out login codes to anyone
-    # who calls the endpoint. Set APP_VERIFICATION_EXPOSE_CODE=true locally only.
     expose-code: ${APP_VERIFICATION_EXPOSE_CODE:false}

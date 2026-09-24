@@ -72,9 +72,6 @@ public class TradeController {
         return service.incoming(userId(jwt));
     }
 
-    // One trade in whatever state it ended. /active lists only open trades, so a
-    // trade the other player completes just disappears from there; this is how
-    // the game finds out it completed and brings the exchange into the backpack.
     @GetMapping("/{tradeId}")
     public TradeView get(@AuthenticationPrincipal Jwt jwt,
                          @PathVariable UUID tradeId) {
@@ -408,8 +405,6 @@ class TradeService {
         requireOnline(trade.getRequesterId(), trade.getTargetId());
         ObjectNode normalized = normalizeOffer(request);
         validateOfferAgainstSavedFarm(actor, normalized);
-        // A seed only reaches a farm whose district grows it. Refused here, as the
-        // offer is made, so the player who dragged it in is the one who hears why.
         UUID recipient = actor.equals(trade.getRequesterId()) ? trade.getTargetId() : trade.getRequesterId();
         requireSeedsAvailableIn(economy.districtOf(recipient), readOffer(normalized), SEED_NOT_AVAILABLE_TO_PARTNER);
         trade.setOffer(actor, normalized);
@@ -479,7 +474,6 @@ class TradeService {
 
         validateOffer(requesterSnapshot, requesterOffer, "requester");
         validateOffer(targetSnapshot, targetOffer, "target");
-        // Checked once more against the locked farms, right before anything moves.
         requireSeedsAvailableIn(economy.district(targetSnapshot), requesterOffer, SEED_NOT_AVAILABLE_IN_TRADE);
         requireSeedsAvailableIn(economy.district(requesterSnapshot), targetOffer, SEED_NOT_AVAILABLE_IN_TRADE);
 
@@ -494,14 +488,9 @@ class TradeService {
                 ? requesterFarm.getRevision() : targetFarm.getRevision();
     }
 
-    /**
-     * Said to the player making the offer, and word for word the game's popup, so
-     * the game can recognise a refusal from here and open that popup.
-     */
     static final String SEED_NOT_AVAILABLE_TO_PARTNER =
             "The seed that you are offering isn't available to the other person you're trading with, please select another seed that is available to the other player.";
 
-    /** Said when both offers are already in and one of them has such a seed. */
     static final String SEED_NOT_AVAILABLE_IN_TRADE =
             "A seed in this trade is not grown in the receiving player's district. "
             + "Remove it before agreeing to the trade.";

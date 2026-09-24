@@ -17,15 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
-/**
- * Talks to Google's Generative Language API on the game's behalf.
- *
- * The key lives here rather than in the Unity client. A Unity build ships its
- * serialized Inspector values inside the APK, so a key held on a MonoBehaviour
- * can be recovered by unpacking the package - anyone who did so could spend
- * against the project's quota. Keeping it server-side means the phone never
- * holds the secret; it only holds a player JWT, which is revocable and scoped.
- */
 @Component
 public class GeminiClient {
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
@@ -50,14 +41,6 @@ public class GeminiClient {
         return !apiKey.isBlank();
     }
 
-    /**
-     * One generation call.
-     *
-     * @param systemInstruction optional system prompt, or null to send none
-     * @param userParts         the user text blocks, in order
-     * @param config            per-feature generation settings
-     * @return the model's text plus the reason it stopped
-     */
     public Result generate(String systemInstruction, List<String> userParts, GenerationConfig config) {
         ObjectNode body = mapper.createObjectNode();
 
@@ -97,8 +80,6 @@ public class GeminiClient {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(String.format(ENDPOINT_TEMPLATE, model)))
                 .timeout(Duration.ofSeconds(60))
-                // Header rather than ?key= so the secret never lands in a URL,
-                // where proxies and access logs would record it.
                 .header("x-goog-api-key", apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(
@@ -126,10 +107,6 @@ public class GeminiClient {
         }
     }
 
-    /**
-     * Joins every text part of the first candidate, mirroring what the Unity
-     * clients did locally so multi-part answers are not silently truncated.
-     */
     private Result parse(String rawJson) {
         JsonNode root = mapper.readTree(rawJson);
         JsonNode candidate = root.path("candidates").path(0);
@@ -151,18 +128,12 @@ public class GeminiClient {
         return new Result(text.toString().trim(), finishReason);
     }
 
-    /** Per-feature generation settings; nulls fall back to Gemini's defaults. */
     public record GenerationConfig(Double temperature,
                                    Double topP,
                                    Integer maxOutputTokens,
                                    boolean jsonResponse) {
     }
 
-    /**
-     * @param finishReason "STOP" means the model finished its own sentence.
-     *                     Anything else - usually MAX_TOKENS - means the answer
-     *                     was cut off, which the game shows as a retry prompt.
-     */
     public record Result(String text, String finishReason) {
     }
 }

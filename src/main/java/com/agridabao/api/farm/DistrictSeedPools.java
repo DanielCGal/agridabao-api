@@ -8,31 +8,11 @@ import java.util.TreeMap;
 
 import static java.util.Map.entry;
 
-/**
- * Which crops a farm in each Davao district grows, and so which planting
- * materials it is allowed to obtain.
- *
- * <p>A farm can only get the planting materials of crops its own district
- * grows - every material of such a crop, so a Calinan farm can have both the
- * banana plantlet and the banana sucker. The game enforces that in the shop,
- * but a marketplace purchase and a trade are carried out here, so this is where
- * they are refused - a modified or older client cannot talk its way around it.
- *
- * <p>This must stay identical to {@code DistrictCropPools} in the game client,
- * fallback included. A farm with no district recorded, or one this table does not
- * know, uses the fallback pool on both sides.
- *
- * <p>Only planting material is restricted. Produce, tools and kits can be bought
- * and traded by anyone. The five seed items the planting materials replaced
- * (banana, coconut, mango, pineapple and strawberry seed) are still limited by
- * their crop, because an older version of the game can still list and trade them.
- */
 public final class DistrictSeedPools {
 
     private DistrictSeedPools() {
     }
 
-    /** Each planting material, and the crop it grows into. */
     private static final Map<String, String> CROP_OF_MATERIAL = Map.ofEntries(
             entry("CacaoSeed", "Cacao"),
             entry("DurianSeed", "Durian"),
@@ -50,7 +30,6 @@ public final class DistrictSeedPools {
             entry("SquashSeed", "Squash"),
             entry("SquashSeedling", "Squash"),
             entry("CornSeed", "Corn"),
-            // Retired seed items, still sent by older versions of the game.
             entry("BananaSeed", "Banana"),
             entry("CoconutSeed", "Coconut"),
             entry("MangoSeed", "Mango"),
@@ -71,15 +50,12 @@ public final class DistrictSeedPools {
             "Tugbok", Set.of("Banana", "Cacao", "Coconut", "Mangosteen",
                     "Corn", "Durian", "Mango")));
 
-    /** For a farm whose district is missing or unrecognised - the same four as the game. */
     private static final Set<String> FALLBACK = Set.of("Coconut", "Banana", "Cacao", "Corn");
 
-    /** Whether the item is planting material, and so subject to district pools at all. */
     public static boolean isRestricted(String itemType) {
         return itemType != null && CROP_OF_MATERIAL.containsKey(itemType);
     }
 
-    /** Whether a farm in {@code districtName} may obtain the item. */
     public static boolean isAvailableIn(String itemType, String districtName) {
         if (!isRestricted(itemType)) {
             return true;
@@ -87,7 +63,6 @@ public final class DistrictSeedPools {
         return cropsFor(districtName).contains(CROP_OF_MATERIAL.get(itemType));
     }
 
-    /** The crops a farm in {@code districtName} grows, or the fallback pool. */
     public static Set<String> cropsFor(String districtName) {
         if (districtName == null || districtName.isBlank()) {
             return FALLBACK;
@@ -96,7 +71,6 @@ public final class DistrictSeedPools {
         return crops != null ? crops : FALLBACK;
     }
 
-    /** Every planting material a farm in {@code districtName} may obtain. */
     public static Set<String> poolFor(String districtName) {
         Set<String> crops = cropsFor(districtName);
         Set<String> materials = new HashSet<>();

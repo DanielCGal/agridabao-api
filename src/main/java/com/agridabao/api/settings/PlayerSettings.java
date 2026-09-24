@@ -27,15 +27,12 @@ public class PlayerSettings {
     @Column(name = "render_distance", nullable = false)
     private float renderDistance;
 
-    /** Interface size multiplier; 1 is the size the game has always drawn at. */
     @Column(name = "ui_scale", nullable = false)
     private float uiScale;
 
-    /** Text size multiplier, applied on top of {@link #uiScale}. */
     @Column(name = "text_scale", nullable = false)
     private float textScale;
 
-    /** When true the adviser and climate evaluation answer in a couple of sentences. */
     @Column(name = "ai_summarization", nullable = false)
     private boolean aiSummarization;
 

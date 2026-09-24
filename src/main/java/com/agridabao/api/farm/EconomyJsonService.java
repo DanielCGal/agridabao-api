@@ -22,12 +22,6 @@ public class EconomyJsonService {
             "BtBioInsecticideLiter", "CopperFungicideLiter"
     );
 
-    /**
-     * Must match {@code SocialMarketplaceCatalog.TradableItems} in the game. The
-     * five retired seed items (banana, coconut, mango, pineapple and strawberry
-     * seed) stay tradable here only so older versions of the game keep working;
-     * the current game turns any it receives into the material that replaced it.
-     */
     private static final Set<String> TRADABLE_ITEMS = Set.of(
             "CoconutSeed", "CoconutSeednut", "Coconut",
             "BananaSeed", "BananaPlantlet", "BananaSucker", "Banana",
@@ -202,11 +196,6 @@ public class EconomyJsonService {
         return snapshot.path("area").path("districtName").asText("");
     }
 
-    /**
-     * The district a player's saved farm is in, or an empty string when they have
-     * no saved farm or it does not record one - which {@link DistrictSeedPools}
-     * treats as its fallback pool, exactly as the game does.
-     */
     public String districtOf(UUID userId) {
         return farmRepository.findById(userId)
                 .map(FarmSave::getSnapshot)
@@ -214,7 +203,6 @@ public class EconomyJsonService {
                 .orElse("");
     }
 
-    /** Whether a farm in this district may obtain the item. Only crop seeds are limited. */
     public boolean isItemAvailableInDistrict(String itemType, String districtName) {
         return DistrictSeedPools.isAvailableIn(itemType, districtName);
     }
@@ -235,16 +223,11 @@ public class EconomyJsonService {
         }
     }
 
-    /**
-     * An item's marketplace base value, per item, in centavos. Turn a total into
-     * whole pesos with {@link PesoRounding#toWholePesos}.
-     */
     public int baseValueCentavos(String itemType) {
 
         Integer weatherMitigationBaseValue =
         WeatherMitigationTradableItems.baseValueOrNull(itemType);
         if (weatherMitigationBaseValue != null) {
-            // That table is still in whole pesos.
             return weatherMitigationBaseValue * 100;
         }
 
@@ -306,73 +289,59 @@ public class EconomyJsonService {
         slot.put("sprayerLiquid", "None");
     }
 
-    /** Must match {@code PlayerInventory.GetMaxStack} in the game. */
     private static int maxStack(String itemType) {
         if (LIQUID_ITEMS.contains(itemType)) {
             return 1;
         }
-        // The game caps a stack of aphid traps at 99. A bigger stack written here
-        // was loaded into one slot anyway, past the game's own limit.
         return "AphidTrap".equals(itemType) ? 99 : 999;
     }
 
-    /**
-     * Marketplace base values, per item, in centavos.
-     *
-     * <p>Seeds follow the Davao City government seed prices and produce follows
-     * the shipping bin, both of which have centavos in them; the tools keep the
-     * NPC shop prices. Must match {@code SocialMarketplaceCatalog.BaseValues} in
-     * the game client, or the listing fee a player is shown is not the one charged.
-     */
     private static Map<String, Integer> buildBaseValues() {
         Map<String, Integer> values = new LinkedHashMap<>();
-        values.put("PineappleSeed", 1000);              // P10
-        values.put("BananaSeed", 1500);                 // P15
-        values.put("CacaoSeed", 2500);                  // P25
-        values.put("CoconutSeed", 1500);                // P15
-        values.put("PomeloSeed", 5000);                 // P50
-        values.put("MangoSeed", 3000);                  // P30
-        values.put("MangosteenSeed", 7500);             // P75
-        values.put("DurianSeed", 6000);                 // P60
-        values.put("CornSeed", 38889);                  // P388.89
-        values.put("EggplantSeed", 820000);             // P8200
-        values.put("SquashSeed", 300000);               // P3000
-        values.put("StrawberrySeed", 300);              // P3
-        values.put("TomatoSeed", 950000);               // P9500
-        // Planting materials. The five that replaced the retired seeds above keep
-        // that seed's price; the plantlet, the grafted seedling and the ready
-        // squash seedling are priced above the material they skip ahead of.
-        values.put("BananaPlantlet", 3000);             // P30
-        values.put("BananaSucker", 1500);               // P15
-        values.put("MangoGraftedSeedling", 8000);       // P80
-        values.put("MangoLiso", 3000);                  // P30
-        values.put("CoconutSeednut", 1500);             // P15
-        values.put("PineappleSucker", 1000);            // P10
-        values.put("StrawberryRunner", 300);            // P3
-        values.put("SquashSeedling", 330000);           // P3300
-        values.put("Coconut", 1689);                    // P16.89
-        values.put("Banana", 5100);                     // P51
-        values.put("Durian", 15000);                    // P150
-        values.put("Pomelo", 20000);                    // P200
-        values.put("Cacao", 27527);                     // P275.27
-        values.put("Pineapple", 5000);                  // P50
-        values.put("Mangosteen", 5000);                 // P50
-        values.put("Mango", 11800);                     // P118
-        values.put("Corn", 1500);                       // P15
-        values.put("Eggplant", 6200);                   // P62
-        values.put("Squash", 4200);                     // P42
-        values.put("Strawberry", 35000);                // P350
-        values.put("Tomato", 15600);                    // P156
-        values.put("AphidTrap", 3500);                  // P35
-        values.put("InsecticideLiter", 9000);           // P90
-        values.put("DisinfectantLiter", 8000);          // P80
-        values.put("NeemSoapLiter", 10000);             // P100
-        values.put("BtBioInsecticideLiter", 13000);     // P130
-        values.put("CopperFungicideLiter", 12000);      // P120
-        values.put("PheromoneTrap", 9000);              // P90
-        values.put("FruitBag", 2500);                   // P25
-        values.put("DrainageKit", 15000);               // P150
-        values.put("TermiteBaitStation", 11000);        // P110
+        values.put("PineappleSeed", 1000);
+        values.put("BananaSeed", 1500);
+        values.put("CacaoSeed", 2500);
+        values.put("CoconutSeed", 1500);
+        values.put("PomeloSeed", 5000);
+        values.put("MangoSeed", 3000);
+        values.put("MangosteenSeed", 7500);
+        values.put("DurianSeed", 6000);
+        values.put("CornSeed", 38889);
+        values.put("EggplantSeed", 820000);
+        values.put("SquashSeed", 300000);
+        values.put("StrawberrySeed", 300);
+        values.put("TomatoSeed", 950000);
+        values.put("BananaPlantlet", 3000);
+        values.put("BananaSucker", 1500);
+        values.put("MangoGraftedSeedling", 8000);
+        values.put("MangoLiso", 3000);
+        values.put("CoconutSeednut", 1500);
+        values.put("PineappleSucker", 1000);
+        values.put("StrawberryRunner", 300);
+        values.put("SquashSeedling", 330000);
+        values.put("Coconut", 1689);
+        values.put("Banana", 5100);
+        values.put("Durian", 15000);
+        values.put("Pomelo", 20000);
+        values.put("Cacao", 27527);
+        values.put("Pineapple", 5000);
+        values.put("Mangosteen", 5000);
+        values.put("Mango", 11800);
+        values.put("Corn", 1500);
+        values.put("Eggplant", 6200);
+        values.put("Squash", 4200);
+        values.put("Strawberry", 35000);
+        values.put("Tomato", 15600);
+        values.put("AphidTrap", 3500);
+        values.put("InsecticideLiter", 9000);
+        values.put("DisinfectantLiter", 8000);
+        values.put("NeemSoapLiter", 10000);
+        values.put("BtBioInsecticideLiter", 13000);
+        values.put("CopperFungicideLiter", 12000);
+        values.put("PheromoneTrap", 9000);
+        values.put("FruitBag", 2500);
+        values.put("DrainageKit", 15000);
+        values.put("TermiteBaitStation", 11000);
         return Map.copyOf(values);
     }
 }
