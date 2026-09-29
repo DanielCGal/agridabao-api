@@ -82,3 +82,8 @@ app:
     max-attempts: ${APP_VERIFICATION_MAX_ATTEMPTS:5}
     resend-cooldown-seconds: ${APP_VERIFICATION_RESEND_COOLDOWN_SECONDS:30}
     expose-code: ${APP_VERIFICATION_EXPOSE_CODE:false}
+
+  reviews:
+    allowed-origins: ${APP_REVIEWS_ALLOWED_ORIGINS:https://danielcgal.github.io,http://localhost:8777,http://127.0.0.1:8777}
+    max-per-address-per-hour: ${APP_REVIEWS_MAX_PER_ADDRESS_PER_HOUR:20}
+    max-per-hour: ${APP_REVIEWS_MAX_PER_HOUR:200}

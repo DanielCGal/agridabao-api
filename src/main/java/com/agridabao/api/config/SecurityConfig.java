@@ -12,6 +12,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,10 +28,16 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Configuration
@@ -41,10 +48,12 @@ public class SecurityConfig {
                                             ObjectProvider<AppUserRepository> users) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/info", "/error")
+                        .requestMatchers("/api/auth/**", "/api/reviews", "/api/reviews/**",
+                                "/actuator/health", "/actuator/info", "/error")
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer ->
@@ -105,6 +114,26 @@ public class SecurityConfig {
     private static OAuth2TokenValidatorResult staleSession() {
         return OAuth2TokenValidatorResult.failure(new OAuth2Error(
                 "invalid_token", "This session has ended. Please sign in again.", null));
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.reviews.allowed-origins:https://danielcgal.github.io}") String allowedOrigins) {
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+
+        CorsConfiguration reviews = new CorsConfiguration();
+        reviews.setAllowedOrigins(origins);
+        reviews.setAllowedMethods(List.of("GET", "POST"));
+        reviews.setAllowedHeaders(List.of("Content-Type", "Accept"));
+        reviews.setMaxAge(Duration.ofHours(1));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/reviews", reviews);
+        source.registerCorsConfiguration("/api/reviews/**", reviews);
+        return source;
     }
 
     @Bean
