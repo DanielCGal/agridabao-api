@@ -65,6 +65,9 @@ public class ReviewController {
 }
 
 record CreateReviewRequest(
+        @Size(max = ReviewService.MAX_NAME_LENGTH,
+                message = "Please keep your name to 60 characters or fewer.")
+        String name,
         @NotNull(message = "This is a required question.")
         @Min(value = 1, message = "Choose a rating from 1 to 5 stars.")
         @Max(value = 5, message = "Choose a rating from 1 to 5 stars.")
@@ -76,7 +79,7 @@ record CreateReviewRequest(
         @Size(max = 200) String website
 ) { }
 
-record ReviewResponse(UUID id, int rating, String comment, Instant createdAt) { }
+record ReviewResponse(UUID id, String name, int rating, String comment, Instant createdAt) { }
 
 record RatingSummaryResponse(long total, double average, List<Long> counts) { }
 
@@ -96,6 +99,9 @@ class GameReview {
     @Id
     private UUID id;
 
+    @Column(name = "reviewer_name", length = 60)
+    private String reviewerName;
+
     @Column(nullable = false)
     private int rating;
 
@@ -110,8 +116,9 @@ class GameReview {
 
     protected GameReview() { }
 
-    GameReview(UUID id, int rating, String body, Instant createdAt) {
+    GameReview(UUID id, String reviewerName, int rating, String body, Instant createdAt) {
         this.id = id;
+        this.reviewerName = reviewerName;
         this.rating = rating;
         this.body = body;
         this.hidden = false;
@@ -119,6 +126,7 @@ class GameReview {
     }
 
     UUID getId() { return id; }
+    String getReviewerName() { return reviewerName; }
     int getRating() { return rating; }
     String getBody() { return body; }
     boolean isHidden() { return hidden; }
@@ -133,6 +141,7 @@ interface GameReviewRepository extends JpaRepository<GameReview, UUID> {
 
 @Service
 class ReviewService {
+    static final int MAX_NAME_LENGTH = 60;
     static final int MAX_COMMENT_LENGTH = 1000;
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 20;
@@ -175,12 +184,18 @@ class ReviewService {
             throw new BadRequestException("Please keep your answer to 1000 characters or fewer.");
         }
 
+        String name = cleanName(request.name());
+        if (name != null && name.length() > MAX_NAME_LENGTH) {
+            throw new BadRequestException("Please keep your name to 60 characters or fewer.");
+        }
+
         if (!rateLimiter.tryAcquire(clientAddress)) {
             throw new TooManyRequestsException(
                     "Too many reviews have been sent in the last hour. Please try again later.");
         }
 
-        GameReview review = new GameReview(UUID.randomUUID(), request.rating(), comment, Instant.now());
+        GameReview review = new GameReview(
+                UUID.randomUUID(), name, request.rating(), comment, Instant.now());
         repository.save(review);
 
         return new ReviewPostedResponse(response(review), summary());
@@ -216,6 +231,11 @@ class ReviewService {
         return kept.toString().replaceAll("\n{3,}", "\n\n").strip();
     }
 
+    private static String cleanName(String raw) {
+        String name = clean(raw).replaceAll("\\s+", " ");
+        return name.isEmpty() ? null : name;
+    }
+
     private static boolean isHiddenCharacter(int point) {
         return Character.isISOControl(point)
                 || (point >= 0x202A && point <= 0x202E)
@@ -225,6 +245,7 @@ class ReviewService {
     private static ReviewResponse response(GameReview review) {
         return new ReviewResponse(
                 review.getId(),
+                review.getReviewerName(),
                 review.getRating(),
                 review.getBody(),
                 review.getCreatedAt());
