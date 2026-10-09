@@ -128,12 +128,13 @@ class AiService {
                 return unavailable();
             }
 
-            List<String> sources = AiGuardrails.REFUSAL.equals(result.text())
+            String reply = AiGuardrails.withoutPlayerCalledAntonio(result.text());
+            List<String> sources = AiGuardrails.REFUSAL.equals(reply)
                     ? List.of()
                     : knowledge.describeSources(result.sources());
             String text = sources.isEmpty()
-                    ? result.text()
-                    : result.text() + "\n\nSources: " + String.join("; ", sources);
+                    ? reply
+                    : reply + "\n\nSources: " + String.join("; ", sources);
 
             return new AiGenerateResponse(true, text, result.finishReason(), null, sources);
         } catch (IllegalArgumentException ex) {
