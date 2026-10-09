@@ -59,6 +59,11 @@ app:
       api-key: ${GEMINI_API_KEY:}
       model: ${GEMINI_MODEL:gemini-2.5-flash}
 
+    knowledge:
+      enabled: ${APP_AI_KNOWLEDGE_ENABLED:true}
+      on-for-older-games: ${APP_AI_KNOWLEDGE_ON_FOR_OLDER_GAMES:true}
+      source-url: ${APP_AI_KNOWLEDGE_DOC_URL:https://docs.google.com/document/d/1L6AHhsi8xPpVVDJ8GIo2j9HS2i-aD3uesLZc4TB3-eI/export?format=txt}
+
   jwt:
     issuer: agridabao-api
     secret-base64: ${APP_JWT_SECRET_BASE64}

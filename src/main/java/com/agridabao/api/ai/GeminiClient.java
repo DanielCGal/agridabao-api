@@ -15,23 +15,28 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class GeminiClient {
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
-    private static final String ENDPOINT_TEMPLATE =
-            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
+    static final String DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com";
 
     private final String apiKey;
     private final String model;
+    private final String endpoint;
     private final HttpClient http;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public GeminiClient(@Value("${app.ai.gemini.api-key:}") String apiKey,
-                        @Value("${app.ai.gemini.model:gemini-2.5-flash}") String model) {
+                        @Value("${app.ai.gemini.model:gemini-2.5-flash}") String model,
+                        @Value("${app.ai.gemini.base-url:" + DEFAULT_BASE_URL + "}") String baseUrl) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null || model.isBlank() ? "gemini-2.5-flash" : model.trim();
+        this.endpoint = trimBase(baseUrl) + "/v1beta/models/" + this.model + ":generateContent";
         this.http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(15))
                 .build();
@@ -42,6 +47,11 @@ public class GeminiClient {
     }
 
     public Result generate(String systemInstruction, List<String> userParts, GenerationConfig config) {
+        return generate(systemInstruction, userParts, config, null);
+    }
+
+    public Result generate(String systemInstruction, List<String> userParts, GenerationConfig config,
+                           String fileSearchStore) {
         ObjectNode body = mapper.createObjectNode();
 
         if (systemInstruction != null && !systemInstruction.isBlank()) {
@@ -63,6 +73,12 @@ public class GeminiClient {
             throw new IllegalArgumentException("The request contained no prompt text.");
         }
 
+        if (fileSearchStore != null && !fileSearchStore.isBlank()) {
+            body.putArray("tools").addObject()
+                    .putObject("file_search")
+                    .putArray("file_search_store_names").add(fileSearchStore);
+        }
+
         ObjectNode generationConfig = body.putObject("generationConfig");
         if (config.temperature() != null) {
             generationConfig.put("temperature", config.temperature());
@@ -78,7 +94,7 @@ public class GeminiClient {
         }
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(String.format(ENDPOINT_TEMPLATE, model)))
+                .uri(URI.create(endpoint))
                 .timeout(Duration.ofSeconds(60))
                 .header("x-goog-api-key", apiKey)
                 .header("Content-Type", "application/json")
@@ -91,9 +107,10 @@ public class GeminiClient {
                     http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.warn("Gemini rejected the request (HTTP {}).", response.statusCode());
+                String detail = errorDetail(mapper, response.body());
+                log.warn("Gemini rejected the request (HTTP {}{}).", response.statusCode(), detail);
                 throw new IllegalStateException(
-                        "The AI service returned HTTP " + response.statusCode() + ".");
+                        "The AI service returned HTTP " + response.statusCode() + detail + ".");
             }
 
             return parse(response.body());
@@ -125,7 +142,59 @@ public class GeminiClient {
             text.append(value.trim());
         }
 
-        return new Result(text.toString().trim(), finishReason);
+        return new Result(text.toString().trim(), finishReason, sourceTitles(candidate));
+    }
+
+    private static List<String> sourceTitles(JsonNode candidate) {
+        JsonNode grounding = candidate.path("groundingMetadata");
+        JsonNode chunks = grounding.path("groundingChunks");
+        if (!chunks.isArray() || chunks.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Integer> used = new LinkedHashSet<>();
+        for (JsonNode support : grounding.path("groundingSupports")) {
+            for (JsonNode index : support.path("groundingChunkIndices")) {
+                used.add(index.asInt(-1));
+            }
+        }
+        if (used.isEmpty()) {
+            for (int i = 0; i < chunks.size(); i++) {
+                used.add(i);
+            }
+        }
+
+        Set<String> titles = new LinkedHashSet<>();
+        for (int index : used) {
+            if (index < 0 || index >= chunks.size()) {
+                continue;
+            }
+            String title = chunks.get(index).path("retrievedContext").path("title").asText("").trim();
+            if (!title.isEmpty()) {
+                titles.add(title);
+            }
+        }
+        return new ArrayList<>(titles);
+    }
+
+    static String trimBase(String baseUrl) {
+        String base = baseUrl == null || baseUrl.isBlank() ? DEFAULT_BASE_URL : baseUrl.trim();
+        return base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
+    }
+
+    static String errorDetail(ObjectMapper mapper, String body) {
+        if (body == null || body.isBlank()) {
+            return "";
+        }
+        try {
+            String message = mapper.readTree(body).path("error").path("message").asText("").trim();
+            if (message.isEmpty()) {
+                return "";
+            }
+            return ": " + (message.length() <= 240 ? message : message.substring(0, 240) + "...");
+        } catch (RuntimeException ex) {
+            return "";
+        }
     }
 
     public record GenerationConfig(Double temperature,
@@ -134,6 +203,6 @@ public class GeminiClient {
                                    boolean jsonResponse) {
     }
 
-    public record Result(String text, String finishReason) {
+    public record Result(String text, String finishReason, List<String> sources) {
     }
 }

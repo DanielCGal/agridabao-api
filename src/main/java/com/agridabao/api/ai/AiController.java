@@ -33,6 +33,11 @@ public class AiController {
         return service.status();
     }
 
+    @GetMapping("/knowledge")
+    public KnowledgeStatusResponse knowledge() {
+        return service.knowledgeStatus();
+    }
+
     @PostMapping("/generate")
     public AiGenerateResponse generate(@AuthenticationPrincipal Jwt jwt,
                                        @Valid @RequestBody AiGenerateRequest request) {
@@ -50,14 +55,24 @@ enum AiFeature {
 record AiGenerateRequest(
         @NotNull AiFeature feature,
         @Size(max = 20000) String systemInstruction,
-        @NotEmpty @Size(max = 8) List<@Size(max = 60000) String> userParts
+        @NotEmpty @Size(max = 8) List<@Size(max = 60000) String> userParts,
+        Boolean useKnowledge
 ) {
 }
 
 record AiGenerateResponse(boolean available,
                           String text,
                           String finishReason,
-                          String message) {
+                          String message,
+                          List<String> sources) {
+}
+
+record KnowledgeStatusResponse(boolean enabled,
+                               boolean ready,
+                               String state,
+                               int documents,
+                               String lastSyncAt,
+                               String problem) {
 }
 
 record AiStatusResponse(boolean available, String message) {
@@ -71,10 +86,13 @@ class AiService {
             "Sorry, Antonio is still busy with his farm, please try again later.";
 
     private final GeminiClient gemini;
+    private final KnowledgeBase knowledge;
     private final boolean enabled;
 
-    AiService(GeminiClient gemini, @Value("${app.ai.enabled:true}") boolean enabled) {
+    AiService(GeminiClient gemini, KnowledgeBase knowledge,
+              @Value("${app.ai.enabled:true}") boolean enabled) {
         this.gemini = gemini;
+        this.knowledge = knowledge;
         this.enabled = enabled;
 
         log.info("AI adviser: {} (key {})",
@@ -95,13 +113,14 @@ class AiService {
         }
 
         GeminiClient.GenerationConfig config = configFor(request.feature());
-
-        String systemInstruction =
-                AiGuardrails.systemInstructionFor(request.feature(), request.systemInstruction());
         List<String> userParts = prepareParts(request.feature(), request.userParts());
 
+        String fieldGuide = request.feature() == AiFeature.ADVISOR
+                ? knowledge.storeFor(request.useKnowledge())
+                : null;
+
         try {
-            GeminiClient.Result result = gemini.generate(systemInstruction, userParts, config);
+            GeminiClient.Result result = ask(request, userParts, config, fieldGuide);
 
             if (result.text() == null || result.text().isBlank()) {
                 log.warn("AI returned no text for {} (finishReason={}).",
@@ -109,13 +128,51 @@ class AiService {
                 return unavailable();
             }
 
-            return new AiGenerateResponse(true, result.text(), result.finishReason(), null);
+            List<String> sources = AiGuardrails.REFUSAL.equals(result.text())
+                    ? List.of()
+                    : knowledge.describeSources(result.sources());
+            String text = sources.isEmpty()
+                    ? result.text()
+                    : result.text() + "\n\nSources: " + String.join("; ", sources);
+
+            return new AiGenerateResponse(true, text, result.finishReason(), null, sources);
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException(ex.getMessage());
         } catch (RuntimeException ex) {
             log.warn("AI request for {} failed: {}", request.feature(), ex.getMessage());
             return unavailable();
         }
+    }
+
+    private GeminiClient.Result ask(AiGenerateRequest request,
+                                    List<String> userParts,
+                                    GeminiClient.GenerationConfig config,
+                                    String fieldGuide) {
+        if (fieldGuide != null) {
+            try {
+                GeminiClient.Result grounded = gemini.generate(
+                        AiGuardrails.systemInstructionFor(request.feature(), request.systemInstruction(), true),
+                        userParts, config, fieldGuide);
+
+                if (grounded.text() != null && !grounded.text().isBlank()) {
+                    return grounded;
+                }
+                log.warn("AI returned no text with the field guide (finishReason={}); asking again without it.",
+                        grounded.finishReason());
+            } catch (IllegalArgumentException ex) {
+                throw ex;
+            } catch (RuntimeException ex) {
+                knowledge.reportFailure(ex.getMessage());
+            }
+        }
+
+        return gemini.generate(
+                AiGuardrails.systemInstructionFor(request.feature(), request.systemInstruction(), false),
+                userParts, config);
+    }
+
+    KnowledgeStatusResponse knowledgeStatus() {
+        return knowledge.status();
     }
 
     private static final int MAX_QUESTION_CHARS = 1000;
@@ -143,7 +200,7 @@ class AiService {
     }
 
     private static AiGenerateResponse unavailable() {
-        return new AiGenerateResponse(false, null, null, UNAVAILABLE_MESSAGE);
+        return new AiGenerateResponse(false, null, null, UNAVAILABLE_MESSAGE, List.of());
     }
 
     private static GeminiClient.GenerationConfig configFor(AiFeature feature) {
