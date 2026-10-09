@@ -30,7 +30,9 @@ class KnowledgeBase {
 
     static final String STORE_PREFIX = "agridabaw-field-guide-";
 
-    private static final Duration[] RETRY_AFTER = {Duration.ofMinutes(2), Duration.ofMinutes(10)};
+    private static final Duration[] RETRY_AFTER =
+            {Duration.ofSeconds(30), Duration.ofMinutes(2), Duration.ofMinutes(5)};
+    private static final Duration RETRY_LATER = Duration.ofMinutes(15);
     private static final Duration INDEXING_WAIT = Duration.ofMinutes(4);
     private static final Duration PAUSE_AFTER_FAILURE = Duration.ofMinutes(10);
     private static final int MAX_SOURCES = 2;
@@ -131,11 +133,9 @@ class KnowledgeBase {
                 log.warn("AI field guide: sync attempt {} failed: {}", attempt + 1, ex.getMessage());
             }
 
-            if (attempt >= RETRY_AFTER.length) {
-                return;
-            }
+            Duration wait = attempt < RETRY_AFTER.length ? RETRY_AFTER[attempt] : RETRY_LATER;
             try {
-                Thread.sleep(RETRY_AFTER[attempt].toMillis());
+                Thread.sleep(wait.toMillis());
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 return;
