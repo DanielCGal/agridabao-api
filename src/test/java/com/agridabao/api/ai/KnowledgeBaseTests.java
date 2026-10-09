@@ -138,7 +138,7 @@ class KnowledgeBaseTests {
     }
 
     @Test
-    void addsASourcesLineToTheAdvisersAnswer() throws Exception {
+    void usesTheFieldGuideWithoutPrintingSourcesInTheAnswer() throws Exception {
         KnowledgeBase knowledge = syncedKnowledgeBase();
         AiService service = new AiService(new GeminiClient("test-key", "gemini-2.5-flash", base), knowledge, true);
 
@@ -149,10 +149,10 @@ class KnowledgeBaseTests {
         AiGenerateResponse task = service.generate("player-1", new AiGenerateRequest(
                 AiFeature.TASK_GENERATE, "Return JSON.", List.of("Make a task."), true));
 
-        assertThat(grounded.text()).isEqualTo("Plant them about four metres apart.\n\n"
-                + "Sources: Banana production guide (Agricultural Training Institute; "
-                + "Department of Agriculture, High Value Crops Development Program)");
-        assertThat(grounded.sources()).hasSize(1);
+        assertThat(grounded.text()).isEqualTo("Plant them about four metres apart.");
+        assertThat(grounded.sources()).containsExactly(
+                "Banana production guide (Agricultural Training Institute; "
+                        + "Department of Agriculture, High Value Crops Development Program)");
         assertThat(generateRequests.get(0).path("systemInstruction").path("parts").path(0).path("text").asText())
                 .contains("7. FIELD GUIDE");
 

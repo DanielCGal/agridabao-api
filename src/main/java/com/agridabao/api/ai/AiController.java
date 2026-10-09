@@ -132,11 +132,7 @@ class AiService {
             List<String> sources = AiGuardrails.REFUSAL.equals(reply)
                     ? List.of()
                     : knowledge.describeSources(result.sources());
-            String text = sources.isEmpty()
-                    ? reply
-                    : reply + "\n\nSources: " + String.join("; ", sources);
-
-            return new AiGenerateResponse(true, text, result.finishReason(), null, sources);
+            return new AiGenerateResponse(true, reply, result.finishReason(), null, sources);
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException(ex.getMessage());
         } catch (RuntimeException ex) {
